@@ -276,8 +276,8 @@ export async function generatePDF(options: PDFOptions): Promise<Blob> {
 
   // Function to add footer to current page
   const addFooterToPage = () => {
-    // Add footer contact information with labels above values
-    const footerY = pageHeight - 20; // Position footer 20mm from bottom
+    // Add footer contact information without labels - just the info
+    const footerY = pageHeight - 15; // Position footer 15mm from bottom
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(0, 0, 0);
@@ -290,24 +290,15 @@ export async function generatePDF(options: PDFOptions): Promise<Blob> {
     const column2X = footerStartX + columnWidth;
     const column3X = footerStartX + (columnWidth * 2);
 
-    // Column 1: Call (label above phone number)
-    doc.setFont("helvetica", "bold");
-    doc.text("Call", column1X, footerY);
-    doc.setFont("helvetica", "normal");
-    doc.text(footerPhone, column1X, footerY + 4);
+    // Column 1: Phone number (no label)
+    doc.text(footerPhone, column1X, footerY);
 
-    // Column 2: Message (label above email)
-    doc.setFont("helvetica", "bold");
-    doc.text("Message", column2X, footerY);
-    doc.setFont("helvetica", "normal");
-    doc.text(footerEmail, column2X, footerY + 4);
+    // Column 2: Email (no label)
+    doc.text(footerEmail, column2X, footerY);
 
-    // Column 3: Office Address (label above address)
-    doc.setFont("helvetica", "bold");
-    doc.text("Office Address", column3X, footerY);
-    doc.setFont("helvetica", "normal");
+    // Column 3: Address (no label)
     const addressLines = footerAddress.split(", ");
-    let addressY = footerY + 4;
+    let addressY = footerY;
     for (const line of addressLines) {
       if (line.trim()) {
         doc.text(line.trim(), column3X, addressY);
