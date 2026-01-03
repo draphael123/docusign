@@ -62,25 +62,25 @@ export async function generatePDF(options: PDFOptions): Promise<Blob> {
       doc.addImage(imageUrl, imageType, imageX, imageY, headerWidth, headerHeight);
       URL.revokeObjectURL(imageUrl);
     } else {
-      // Fallback: create a placeholder rectangle if image not found
+      // Fallback: create a placeholder rectangle if image not found (full page width)
       doc.setFillColor(240, 240, 240);
-      doc.rect(margin, margin, contentWidth, 30, "F");
+      doc.rect(0, 0, pageWidth, 40, "F");
       
       doc.setFontSize(12);
       doc.setTextColor(100, 100, 100);
-      doc.text("Header Image (add header.png to public folder)", margin + contentWidth / 2, margin + 15, {
+      doc.text("Header Image (add header.png to public folder)", pageWidth / 2, 20, {
         align: "center",
       });
     }
   } catch (error) {
     console.error("Error loading header image:", error);
-    // Fallback placeholder
+    // Fallback placeholder (full page width)
     doc.setFillColor(240, 240, 240);
-    doc.rect(margin, margin, contentWidth, 30, "F");
+    doc.rect(0, 0, pageWidth, 40, "F");
     
     doc.setFontSize(12);
     doc.setTextColor(100, 100, 100);
-    doc.text("Header Image (add header.png to public folder)", margin + contentWidth / 2, margin + 15, {
+    doc.text("Header Image (add header.png to public folder)", pageWidth / 2, 20, {
       align: "center",
     });
   }
