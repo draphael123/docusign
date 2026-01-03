@@ -5,6 +5,7 @@ import { signatories } from "@/data/signatories";
 import { generatePDF } from "@/lib/pdfGenerator";
 import { Toaster, toast } from "react-hot-toast";
 import { format } from "date-fns";
+import Link from "next/link";
 
 const documentTypes = [
   "Letter of Recommendation",
@@ -379,6 +380,14 @@ export default function Home() {
                 <p className="text-sm text-gray-600 font-medium">
                   Generate professional PDF templates ready to upload to DocuSign
                 </p>
+              </div>
+              <div className="mt-4 sm:mt-0">
+                <Link
+                  href="/suggestions"
+                  className="inline-block px-4 py-2 text-sm bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-lg hover:from-indigo-600 hover:to-purple-600 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 font-medium transition-all"
+                >
+                  💡 Suggestions & Feedback
+                </Link>
               </div>
               <div className="mt-4 sm:mt-0 flex gap-2">
                 <button
