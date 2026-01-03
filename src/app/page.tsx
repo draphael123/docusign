@@ -111,6 +111,9 @@ export default function Home() {
       subject,
       customSignatoryName,
       customSignatoryTitle,
+      customSignatoryCompany,
+      customSignatoryPhone,
+      customSignatoryEmail,
       fontSize,
       lineSpacing,
     };
@@ -126,6 +129,9 @@ export default function Home() {
     subject,
     customSignatoryName,
     customSignatoryTitle,
+    customSignatoryCompany,
+    customSignatoryPhone,
+    customSignatoryEmail,
     fontSize,
     lineSpacing,
   ]);
@@ -142,6 +148,9 @@ export default function Home() {
       subject,
       customSignatoryName,
       customSignatoryTitle,
+      customSignatoryCompany,
+      customSignatoryPhone,
+      customSignatoryEmail,
       fontSize,
       lineSpacing,
     };
