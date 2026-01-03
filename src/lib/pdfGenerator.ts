@@ -1,7 +1,7 @@
 import jsPDF from "jspdf";
 
 export interface PDFOptions {
-  documentType: "Letter of Recommendation" | "Letter of Termination";
+  documentType: string;
   bodyText: string;
   signatoryName: string;
   signatoryTitle: string;

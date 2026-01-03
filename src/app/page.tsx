@@ -4,10 +4,27 @@ import { useState } from "react";
 import { signatories } from "@/data/signatories";
 import { generatePDF } from "@/lib/pdfGenerator";
 
+const documentTypes = [
+  "Letter of Recommendation",
+  "Letter of Termination",
+  "Letter of Employment",
+  "Letter of Reference",
+  "Letter of Introduction",
+  "Letter of Resignation",
+  "Letter of Acceptance",
+  "Letter of Rejection",
+  "Letter of Apology",
+  "Letter of Complaint",
+  "Letter of Inquiry",
+  "Letter of Request",
+  "Letter of Confirmation",
+  "Letter of Agreement",
+  "Letter of Authorization",
+  "Custom Document",
+];
+
 export default function Home() {
-  const [documentType, setDocumentType] = useState<
-    "Letter of Recommendation" | "Letter of Termination"
-  >("Letter of Recommendation");
+  const [documentType, setDocumentType] = useState<string>("Letter of Recommendation");
   const [selectedSignatory, setSelectedSignatory] = useState<string>(
     signatories[0].id
   );
@@ -76,21 +93,14 @@ export default function Home() {
               <select
                 id="documentType"
                 value={documentType}
-                onChange={(e) =>
-                  setDocumentType(
-                    e.target.value as
-                      | "Letter of Recommendation"
-                      | "Letter of Termination"
-                  )
-                }
+                onChange={(e) => setDocumentType(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
-                <option value="Letter of Recommendation">
-                  Letter of Recommendation
-                </option>
-                <option value="Letter of Termination">
-                  Letter of Termination
-                </option>
+                {documentTypes.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
               </select>
             </div>
 
