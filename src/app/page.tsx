@@ -411,20 +411,21 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-6 relative z-10">
               {/* Document Type Dropdown */}
-              <div className="bg-gradient-to-r from-purple-50 to-blue-50 p-4 rounded-xl border border-purple-100">
+              <div className="bg-gradient-to-r from-purple-50 to-blue-50 p-4 rounded-xl border border-purple-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.01]">
                 <label
                   htmlFor="documentType"
-                  className="block text-sm font-semibold text-gray-800 mb-2"
+                  className="block text-sm font-semibold text-gray-800 mb-2 flex items-center gap-2"
                 >
+                  <span className="text-lg">📄</span>
                   Document Type
                 </label>
                 <select
                   id="documentType"
                   value={documentType}
                   onChange={(e) => setDocumentType(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-purple-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white font-medium text-gray-800 hover:border-purple-300"
+                  className="w-full px-4 py-3 border-2 border-purple-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white font-medium text-gray-800 hover:border-purple-300 transition-all cursor-pointer"
                 >
                   {documentTypes.map((type) => (
                     <option key={type} value={type}>
@@ -461,9 +462,10 @@ export default function Home() {
               </div>
 
               {/* Recipient Information */}
-              <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-xl border border-green-100">
+              <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-xl border border-green-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.01]">
                 <h3 className="text-sm font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                  <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                  <span className="text-lg">👤</span>
+                  <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
                   Recipient Information (Optional)
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -535,9 +537,10 @@ export default function Home() {
               </div>
 
               {/* Signatory Radio Selection */}
-              <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-6 rounded-xl border border-indigo-100">
+              <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-6 rounded-xl border border-indigo-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.01]">
                 <label className="block text-sm font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                  <span className="w-2 h-2 bg-indigo-500 rounded-full"></span>
+                  <span className="text-lg">✍️</span>
+                  <span className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></span>
                   Signatory
                 </label>
                 <div className="space-y-3">
@@ -626,9 +629,10 @@ export default function Home() {
               </div>
 
               {/* PDF Formatting Options */}
-              <div className="bg-gradient-to-r from-pink-50 to-rose-50 p-6 rounded-xl border border-pink-100">
+              <div className="bg-gradient-to-r from-pink-50 to-rose-50 p-6 rounded-xl border border-pink-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.01]">
                 <h3 className="text-sm font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                  <span className="w-2 h-2 bg-pink-500 rounded-full"></span>
+                  <span className="text-lg">🎨</span>
+                  <span className="w-2 h-2 bg-pink-500 rounded-full animate-pulse"></span>
                   Formatting Options
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -671,17 +675,19 @@ export default function Home() {
               </div>
 
               {/* AI Text Generation Option */}
-              <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-6 rounded-xl border border-amber-100">
+              <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-6 rounded-xl border border-amber-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.01]">
                 <div className="flex items-center justify-between mb-4">
-                  <label className="block text-sm font-semibold text-gray-800">
+                  <label className="block text-sm font-semibold text-gray-800 flex items-center gap-2">
+                    <span className="text-lg">📝</span>
                     Document Body
                   </label>
                   <button
                     type="button"
                     onClick={() => setShowAiOption(!showAiOption)}
-                    className="text-sm bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-2 rounded-lg hover:from-purple-600 hover:to-pink-600 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 font-medium transition-all"
+                    className="text-sm bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-2 rounded-lg hover:from-purple-600 hover:to-pink-600 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 hover:scale-105 font-medium transition-all relative overflow-hidden group"
                   >
-                    {showAiOption ? "Hide AI Generator" : "✨ Use AI to Generate Text"}
+                    <span className="relative z-10">{showAiOption ? "Hide AI Generator" : "✨ Use AI to Generate Text"}</span>
+                    <span className="absolute inset-0 bg-gradient-to-r from-pink-600 to-purple-600 opacity-0 group-hover:opacity-100 transition-opacity"></span>
                   </button>
                 </div>
 
@@ -755,16 +761,18 @@ export default function Home() {
                 <button
                   onClick={handlePreviewPDF}
                   disabled={isGenerating || !bodyText.trim()}
-                  className="flex-1 bg-gradient-to-r from-gray-600 to-gray-700 text-white py-4 px-6 rounded-xl font-semibold hover:from-gray-700 hover:to-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all text-lg"
+                  className="flex-1 bg-gradient-to-r from-gray-600 to-gray-700 text-white py-4 px-6 rounded-xl font-semibold hover:from-gray-700 hover:to-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-1 hover:scale-105 transition-all text-lg relative overflow-hidden group"
                 >
-                  {isGenerating ? "Generating..." : "👁️ Preview PDF"}
+                  <span className="relative z-10">{isGenerating ? "Generating..." : "👁️ Preview PDF"}</span>
+                  <span className="absolute inset-0 bg-gradient-to-r from-gray-800 to-gray-900 opacity-0 group-hover:opacity-100 transition-opacity"></span>
                 </button>
                 <button
                   onClick={handleGeneratePDF}
                   disabled={isGenerating || !bodyText.trim()}
-                  className="flex-1 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white py-4 px-6 rounded-xl font-semibold hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all text-lg"
+                  className="flex-1 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white py-4 px-6 rounded-xl font-semibold hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-1 hover:scale-105 transition-all text-lg relative overflow-hidden group animate-pulse-slow"
                 >
-                  {isGenerating ? "Generating PDF..." : "📄 Generate & Download PDF"}
+                  <span className="relative z-10">{isGenerating ? "Generating PDF..." : "📄 Generate & Download PDF"}</span>
+                  <span className="absolute inset-0 bg-gradient-to-r from-pink-700 via-purple-700 to-blue-700 opacity-0 group-hover:opacity-100 transition-opacity"></span>
                 </button>
               </div>
             </div>
