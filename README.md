@@ -4,10 +4,11 @@ A Next.js application for generating PDF document templates with dynamic content
 
 ## Features
 
-- **Document Type Selection**: Choose between "Letter of Recommendation" or "Letter of Termination"
-- **Signatory Selection**: Select from pre-configured signatories (Dorn Stemper or Lindsay Burden)
+- **Document Type Selection**: Choose from 16+ document types (Letters of Recommendation, Termination, Employment, etc.)
+- **AI-Powered Text Generation**: Use ChatGPT-like AI to generate document text based on prompts
+- **Signatory Selection**: Select from pre-configured signatories (Doron Stember or Lindsay Burden)
 - **Dynamic PDF Generation**: Automatically generates PDFs with header image, body text, and signatory information
-- **PDF Download**: Automatically downloads generated PDF templates
+- **PDF Download**: Automatically downloads generated PDF templates ready for DocuSign
 
 ## Project Structure
 
@@ -61,9 +62,11 @@ The project is configured for easy deployment to Vercel:
    - Vercel will auto-detect Next.js and configure the build settings
    - Click "Deploy"
 
-3. **Environment Variables** (if needed):
-   - No environment variables required for basic PDF generation
-   - Add any custom configuration in Vercel's project settings if needed
+3. **Environment Variables**:
+   - **OPENAI_API_KEY** (optional): Required for AI text generation feature
+     - Get your API key from [OpenAI Platform](https://platform.openai.com/api-keys)
+     - Add it in Vercel's project settings under "Environment Variables"
+     - If not set, users can still manually enter document text
 
 4. **Your app will be live** at: `https://your-project-name.vercel.app`
 
@@ -71,7 +74,11 @@ The project is configured for easy deployment to Vercel:
 
 1. Select a **Document Type** from the dropdown
 2. Choose a **Signatory** using the radio buttons
-3. Enter the **Document Body** text in the textarea
+3. **Generate Document Text** (optional):
+   - Click "Use AI to Generate Text"
+   - Enter a prompt describing what you want in the document
+   - Click "Generate Text with AI" to auto-generate the content
+   - Or manually enter the **Document Body** text in the textarea
 4. Click **Generate PDF** to create and download the PDF template
 
 ## Signatory Configuration
