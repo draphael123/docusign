@@ -1,6 +1,42 @@
 # Document Template Generator
 
-A Next.js application for generating PDF document templates with dynamic content, header images, and signatory information.
+A professional Next.js web application that simplifies the creation of PDF document templates for business correspondence. This tool enables users to quickly generate professional documents (such as letters of recommendation, termination notices, employment letters, and more) with customizable content, automatic formatting, and AI-powered text generation.
+
+## Purpose
+
+The Document Template Generator is designed to streamline the document creation process for organizations that frequently need to produce standardized business documents. Instead of manually creating each document from scratch, users can:
+
+- **Generate professional PDF templates** with consistent formatting and branding
+- **Customize document content** through an intuitive web interface
+- **Leverage AI assistance** to draft document text based on simple prompts
+- **Save time** by automating the formatting and layout process
+- **Ensure consistency** across all generated documents with standardized templates
+- **Prepare documents for DocuSign** with properly formatted signature areas
+
+## What It Does
+
+This tool provides a complete document generation workflow:
+
+1. **Document Type Selection**: Choose from 16+ pre-configured document types (Letters of Recommendation, Termination, Employment, Reference, etc.)
+
+2. **AI-Powered Content Generation**: Use ChatGPT-like AI to automatically generate professional document text based on your prompts, with options to regenerate or improve the content
+
+3. **Customizable Fields**: 
+   - Add recipient information (name, title, address)
+   - Set document date
+   - Include subject lines
+   - Select or create custom signatories
+
+4. **Professional PDF Output**: 
+   - Full-width header image (your company branding)
+   - Properly formatted document body
+   - Signature area with signatory information
+   - Consistent typography and spacing
+   - Ready for DocuSign upload
+
+5. **Draft Management**: Save, load, and clear drafts automatically using browser storage
+
+6. **Preview Before Download**: Review the generated PDF before downloading
 
 ## Features
 
