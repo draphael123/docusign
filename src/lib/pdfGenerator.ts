@@ -91,7 +91,7 @@ export async function generatePDF(options: PDFOptions): Promise<Blob> {
   let yPosition = margin + 40;
   doc.setFontSize(16);
   doc.setTextColor(0, 0, 0);
-  doc.setFont(undefined, "bold");
+  doc.setFont("helvetica", "bold");
   doc.text(options.documentType, margin + contentWidth / 2, yPosition, {
     align: "center",
   });
@@ -99,7 +99,7 @@ export async function generatePDF(options: PDFOptions): Promise<Blob> {
   // Add body text
   yPosition += 15;
   doc.setFontSize(11);
-  doc.setFont(undefined, "normal");
+  doc.setFont("helvetica", "normal");
   const bodyLines = doc.splitTextToSize(options.bodyText, contentWidth);
   
   // Calculate where body text ends
@@ -131,7 +131,7 @@ export async function generatePDF(options: PDFOptions): Promise<Blob> {
 
   // Add signatory information below signature line
   doc.setFontSize(11);
-  doc.setFont(undefined, "normal");
+  doc.setFont("helvetica", "normal");
   doc.text(options.signatoryName, margin, signatureY + 8);
   doc.text(options.signatoryTitle, margin, signatureY + 15);
 
