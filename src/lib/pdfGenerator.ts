@@ -175,7 +175,7 @@ export async function generatePDF(options: PDFOptions): Promise<Blob> {
   if (options.signatoryEmail) signatoryInfoHeight += 5;
   
   // Ensure we have enough space - check if signatory info will fit
-  const bottomMargin = 40; // Reserve space for footer
+  const bottomMargin = 20; // Standard bottom margin
   if (currentSignatoryY + signatoryInfoHeight > pageHeight - bottomMargin) {
     // If doesn't fit, add new page
     doc.addPage();
