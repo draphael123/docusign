@@ -368,34 +368,34 @@ export default function Home() {
   return (
     <>
       <Toaster position="top-right" />
-      <div className="min-h-screen bg-gray-50 py-6 sm:py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen py-6 sm:py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
-          <div className="bg-white shadow-md rounded-lg p-6 sm:p-8">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+          <div className="bg-white shadow-2xl rounded-2xl p-6 sm:p-8 backdrop-blur-sm border border-white/20">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
+              <div className="mb-4 sm:mb-0">
+                <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-2">
                   Document Template Generator
                 </h1>
-                <p className="text-sm text-gray-600">
-                  Generate PDF templates ready to upload to DocuSign
+                <p className="text-sm text-gray-600 font-medium">
+                  Generate professional PDF templates ready to upload to DocuSign
                 </p>
               </div>
               <div className="mt-4 sm:mt-0 flex gap-2">
                 <button
                   onClick={handleSaveDraft}
-                  className="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+                  className="px-4 py-2 text-sm bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg hover:from-purple-600 hover:to-blue-600 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 font-medium"
                 >
                   Save Draft
                 </button>
                 <button
                   onClick={handleLoadDraft}
-                  className="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+                  className="px-4 py-2 text-sm bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg hover:from-blue-600 hover:to-cyan-600 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 font-medium"
                 >
                   Load Draft
                 </button>
                 <button
                   onClick={handleClearDraft}
-                  className="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+                  className="px-4 py-2 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 font-medium"
                 >
                   Clear
                 </button>
@@ -404,10 +404,10 @@ export default function Home() {
 
             <div className="space-y-6">
               {/* Document Type Dropdown */}
-              <div>
+              <div className="bg-gradient-to-r from-purple-50 to-blue-50 p-4 rounded-xl border border-purple-100">
                 <label
                   htmlFor="documentType"
-                  className="block text-sm font-medium text-gray-700 mb-2"
+                  className="block text-sm font-semibold text-gray-800 mb-2"
                 >
                   Document Type
                 </label>
@@ -415,7 +415,7 @@ export default function Home() {
                   id="documentType"
                   value={documentType}
                   onChange={(e) => setDocumentType(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-3 border-2 border-purple-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white font-medium text-gray-800 hover:border-purple-300"
                 >
                   {documentTypes.map((type) => (
                     <option key={type} value={type}>
@@ -452,8 +452,11 @@ export default function Home() {
               </div>
 
               {/* Recipient Information */}
-              <div className="border-t pt-6">
-                <h3 className="text-sm font-medium text-gray-700 mb-4">Recipient Information (Optional)</h3>
+              <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-xl border border-green-100">
+                <h3 className="text-sm font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                  <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                  Recipient Information (Optional)
+                </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label
@@ -554,16 +557,16 @@ export default function Home() {
                       </div>
                     </label>
                   ))}
-                  <label className="flex items-center p-3 border border-gray-300 rounded-md hover:bg-gray-50 cursor-pointer">
+                  <label className="flex items-center p-4 border-2 border-indigo-200 rounded-xl hover:bg-white hover:border-indigo-400 hover:shadow-md cursor-pointer transition-all duration-200 bg-white/50">
                     <input
                       type="radio"
                       name="signatory"
                       checked={useCustomSignatory}
                       onChange={() => setUseCustomSignatory(true)}
-                      className="mr-3"
+                      className="mr-3 w-5 h-5 text-indigo-600 focus:ring-indigo-500"
                     />
                     <div className="flex-1">
-                      <div className="font-medium text-gray-900">Custom Signatory</div>
+                      <div className="font-semibold text-gray-900">Custom Signatory</div>
                       {useCustomSignatory && (
                         <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
                           <input
@@ -630,22 +633,22 @@ export default function Home() {
               </div>
 
               {/* AI Text Generation Option */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm font-medium text-gray-700">
+              <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-6 rounded-xl border border-amber-100">
+                <div className="flex items-center justify-between mb-4">
+                  <label className="block text-sm font-semibold text-gray-800">
                     Document Body
                   </label>
                   <button
                     type="button"
                     onClick={() => setShowAiOption(!showAiOption)}
-                    className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                    className="text-sm bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-2 rounded-lg hover:from-purple-600 hover:to-pink-600 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 font-medium transition-all"
                   >
-                    {showAiOption ? "Hide AI Generator" : "Use AI to Generate Text"}
+                    {showAiOption ? "Hide AI Generator" : "✨ Use AI to Generate Text"}
                   </button>
                 </div>
 
                 {showAiOption ? (
-                  <div className="space-y-3 mb-3 p-4 bg-blue-50 rounded-md">
+                  <div className="space-y-3 mb-4 p-5 bg-gradient-to-r from-purple-100 to-pink-100 rounded-xl border-2 border-purple-200 shadow-inner">
                     <div>
                       <label
                         htmlFor="aiPrompt"
@@ -667,9 +670,9 @@ export default function Home() {
                         type="button"
                         onClick={() => handleGenerateText("generate")}
                         disabled={isGeneratingText || !aiPrompt.trim()}
-                        className="flex-1 min-w-[120px] bg-green-600 text-white py-2 px-4 rounded-md font-medium hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex-1 min-w-[120px] bg-gradient-to-r from-green-500 to-emerald-500 text-white py-2 px-4 rounded-lg font-medium hover:from-green-600 hover:to-emerald-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all"
                       >
-                        {isGeneratingText ? "Generating..." : "Generate Text"}
+                        {isGeneratingText ? "Generating..." : "✨ Generate Text"}
                       </button>
                       {bodyText && (
                         <>
@@ -677,17 +680,17 @@ export default function Home() {
                             type="button"
                             onClick={() => handleGenerateText("regenerate")}
                             disabled={isGeneratingText}
-                            className="flex-1 min-w-[120px] bg-green-500 text-white py-2 px-4 rounded-md font-medium hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="flex-1 min-w-[120px] bg-gradient-to-r from-blue-500 to-cyan-500 text-white py-2 px-4 rounded-lg font-medium hover:from-blue-600 hover:to-cyan-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all"
                           >
-                            {isGeneratingText ? "Regenerating..." : "Regenerate"}
+                            {isGeneratingText ? "Regenerating..." : "🔄 Regenerate"}
                           </button>
                           <button
                             type="button"
                             onClick={() => handleGenerateText("improve")}
                             disabled={isGeneratingText}
-                            className="flex-1 min-w-[120px] bg-green-500 text-white py-2 px-4 rounded-md font-medium hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="flex-1 min-w-[120px] bg-gradient-to-r from-purple-500 to-pink-500 text-white py-2 px-4 rounded-lg font-medium hover:from-purple-600 hover:to-pink-600 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all"
                           >
-                            {isGeneratingText ? "Improving..." : "Improve Text"}
+                            {isGeneratingText ? "Improving..." : "✨ Improve Text"}
                           </button>
                         </>
                       )}
@@ -695,35 +698,35 @@ export default function Home() {
                   </div>
                 ) : null}
 
-                <textarea
-                  id="bodyText"
-                  value={bodyText}
-                  onChange={(e) => setBodyText(e.target.value)}
-                  rows={10}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Enter the document body text here, or use AI to generate it..."
-                />
-                <div className="mt-1 flex justify-between text-xs text-gray-500">
-                  <span>{wordCount} words</span>
-                  <span>{characterCount} characters</span>
+              <textarea
+                id="bodyText"
+                value={bodyText}
+                onChange={(e) => setBodyText(e.target.value)}
+                rows={10}
+                className="w-full px-4 py-3 border-2 border-amber-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white font-medium text-gray-800 hover:border-amber-300 resize-y"
+                placeholder="Enter the document body text here, or use AI to generate it..."
+              />
+                <div className="mt-2 flex justify-between text-xs font-semibold text-gray-600 bg-white/50 px-3 py-2 rounded-lg">
+                  <span className="flex items-center gap-1">📝 {wordCount} words</span>
+                  <span className="flex items-center gap-1">🔤 {characterCount} characters</span>
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex flex-col sm:flex-row gap-4 pt-4">
                 <button
                   onClick={handlePreviewPDF}
                   disabled={isGenerating || !bodyText.trim()}
-                  className="flex-1 bg-gray-600 text-white py-3 px-4 rounded-md font-medium hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 bg-gradient-to-r from-gray-600 to-gray-700 text-white py-4 px-6 rounded-xl font-semibold hover:from-gray-700 hover:to-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all text-lg"
                 >
-                  {isGenerating ? "Generating..." : "Preview PDF"}
+                  {isGenerating ? "Generating..." : "👁️ Preview PDF"}
                 </button>
                 <button
                   onClick={handleGeneratePDF}
                   disabled={isGenerating || !bodyText.trim()}
-                  className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-md font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white py-4 px-6 rounded-xl font-semibold hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all text-lg"
                 >
-                  {isGenerating ? "Generating PDF..." : "Generate & Download PDF"}
+                  {isGenerating ? "Generating PDF..." : "📄 Generate & Download PDF"}
                 </button>
               </div>
             </div>
