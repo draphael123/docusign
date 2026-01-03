@@ -264,7 +264,13 @@ export default function Home() {
     setIsGenerating(true);
     try {
       const signatory = useCustomSignatory
-        ? { name: customSignatoryName, title: customSignatoryTitle }
+        ? { 
+            name: customSignatoryName, 
+            title: customSignatoryTitle,
+            company: customSignatoryCompany,
+            phone: customSignatoryPhone,
+            email: customSignatoryEmail,
+          }
         : signatories.find((s) => s.id === selectedSignatory);
 
       if (!signatory || !signatory.name) {
