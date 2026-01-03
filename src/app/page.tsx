@@ -6,6 +6,14 @@ import { generatePDF } from "@/lib/pdfGenerator";
 import { Toaster, toast } from "react-hot-toast";
 import { format } from "date-fns";
 import Link from "next/link";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { documentTemplates, DocumentTemplate } from "@/data/templates";
+import { saveToHistory, DocumentHistoryItem } from "@/utils/documentHistory";
+import { updateStats } from "@/utils/statistics";
+import TemplateGallery from "@/components/TemplateGallery";
+import StatisticsPanel from "@/components/StatisticsPanel";
+import DocumentHistory from "@/components/DocumentHistory";
+import ProgressIndicator from "@/components/ProgressIndicator";
 
 const documentTypes = [
   "Letter of Recommendation",
@@ -69,10 +77,81 @@ export default function Home() {
   const [lineSpacing, setLineSpacing] = useState<number>(1.5);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState<boolean>(false);
+  const [showTemplateGallery, setShowTemplateGallery] = useState<boolean>(false);
+  const [showStatistics, setShowStatistics] = useState<boolean>(false);
+  const [showHistory, setShowHistory] = useState<boolean>(false);
+  const [currentStep, setCurrentStep] = useState<number>(1);
+  const [showWizard, setShowWizard] = useState<boolean>(false);
+
+  // Get theme after mount to avoid SSR issues
+  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    if (typeof window !== "undefined") {
+      const savedTheme = localStorage.getItem("theme") as "light" | "dark";
+      if (savedTheme) {
+        setTheme(savedTheme);
+      } else {
+        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        setTheme(prefersDark ? "dark" : "light");
+      }
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    setTheme((prev) => {
+      const newTheme = prev === "light" ? "dark" : "light";
+      if (typeof window !== "undefined") {
+        localStorage.setItem("theme", newTheme);
+        document.documentElement.classList.toggle("dark", newTheme === "dark");
+      }
+      return newTheme;
+    });
+  };
 
   // Character and word count
   const characterCount = bodyText.length;
   const wordCount = bodyText.trim() ? bodyText.trim().split(/\s+/).length : 0;
+
+  // Progress steps
+  const progressSteps = ["Document Type", "Recipient", "Signatory", "Content", "Generate"];
+
+  // Keyboard shortcuts
+  useKeyboardShortcuts([
+    {
+      key: "s",
+      ctrl: true,
+      action: () => handleSaveDraft(),
+      description: "Save draft",
+    },
+    {
+      key: "p",
+      ctrl: true,
+      action: () => {
+        if (bodyText.trim()) handlePreviewPDF();
+      },
+      description: "Preview PDF",
+    },
+    {
+      key: "g",
+      ctrl: true,
+      action: () => {
+        if (bodyText.trim()) handleGeneratePDF();
+      },
+      description: "Generate PDF",
+    },
+    {
+      key: "?",
+      action: () => {
+        toast("Keyboard Shortcuts:\nCtrl+S: Save\nCtrl+P: Preview\nCtrl+G: Generate", {
+          duration: 5000,
+        });
+      },
+      description: "Show shortcuts",
+    },
+  ]);
 
   // Load draft on mount
   useEffect(() => {
@@ -357,6 +436,19 @@ export default function Home() {
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
+
+      // Save to history and update statistics
+      saveToHistory({
+        documentType,
+        signatoryName: signatory.name,
+      });
+      const { newAchievements } = updateStats(documentType, signatory.name);
+      if (newAchievements.length > 0) {
+        newAchievements.forEach((achievement) => {
+          toast.success(`🏆 Achievement Unlocked: ${achievement}!`, { duration: 5000 });
+        });
+      }
+
       toast.success("PDF generated and downloaded successfully!");
     } catch (error: any) {
       console.error("Error generating PDF:", error);
@@ -364,6 +456,25 @@ export default function Home() {
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const handleSelectTemplate = (template: DocumentTemplate) => {
+    setDocumentType(template.documentType);
+    setBodyText(template.bodyText);
+    toast.success(`Template "${template.name}" loaded!`);
+  };
+
+  const handleLoadFromHistory = (item: DocumentHistoryItem) => {
+    setDocumentType(item.documentType);
+    const signatory = signatories.find((s) => s.name === item.signatoryName);
+    if (signatory) {
+      setSelectedSignatory(signatory.id);
+      setUseCustomSignatory(false);
+    } else {
+      setUseCustomSignatory(true);
+      setCustomSignatoryName(item.signatoryName);
+    }
+    toast.success("Document loaded from history!");
   };
 
   return (
@@ -378,7 +489,7 @@ export default function Home() {
       
       <div className="min-h-screen py-6 sm:py-12 px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="max-w-4xl mx-auto">
-          <div className="bg-white/95 shadow-2xl rounded-2xl p-6 sm:p-8 backdrop-blur-md border border-white/30 relative overflow-hidden">
+          <div className="bg-white/95 dark:bg-gray-800/95 shadow-2xl rounded-2xl p-6 sm:p-8 backdrop-blur-md border border-white/30 dark:border-gray-700/30 relative overflow-hidden">
             {/* Shimmer effect overlay */}
             <div className="absolute inset-0 shimmer pointer-events-none"></div>
             
@@ -387,41 +498,78 @@ export default function Home() {
                 <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-purple-600 via-blue-600 to-pink-600 bg-clip-text text-transparent mb-2">
                   ✨ Document Template Generator
                 </h1>
-                <p className="text-sm text-gray-600 font-medium flex items-center gap-2">
+                <p className="text-sm text-gray-600 dark:text-gray-400 font-medium flex items-center gap-2">
                   <span className="inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
                   Generate professional PDF templates ready to upload to DocuSign
                 </p>
               </div>
-              <div className="mt-4 sm:mt-0 flex gap-2">
+              <div className="mt-4 sm:mt-0 flex flex-wrap gap-2">
+                {mounted && (
+                  <button
+                    onClick={toggleTheme}
+                    className="px-4 py-2 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 font-medium"
+                    title="Toggle dark mode"
+                  >
+                    {theme === "dark" ? "☀️" : "🌙"}
+                  </button>
+                )}
+                <button
+                  onClick={() => setShowTemplateGallery(true)}
+                  className="px-4 py-2 text-sm bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:from-green-600 hover:to-emerald-600 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 font-medium"
+                >
+                  📚 Templates
+                </button>
+                <button
+                  onClick={() => setShowStatistics(true)}
+                  className="px-4 py-2 text-sm bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg hover:from-blue-600 hover:to-cyan-600 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 font-medium"
+                >
+                  📊 Stats
+                </button>
+                <button
+                  onClick={() => setShowHistory(true)}
+                  className="px-4 py-2 text-sm bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 font-medium"
+                >
+                  📜 History
+                </button>
                 <Link
                   href="/suggestions"
                   className="inline-block px-4 py-2 text-sm bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-lg hover:from-indigo-600 hover:to-purple-600 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 hover:scale-105 font-medium transition-all relative overflow-hidden group"
                 >
-                  <span className="relative z-10">💡 Suggestions & Feedback</span>
+                  <span className="relative z-10">💡 Feedback</span>
                   <span className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 opacity-0 group-hover:opacity-100 transition-opacity"></span>
                 </Link>
-              </div>
-              <div className="mt-4 sm:mt-0 flex gap-2">
                 <button
                   onClick={handleSaveDraft}
                   className="px-4 py-2 text-sm bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg hover:from-purple-600 hover:to-blue-600 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 font-medium"
+                  title="Ctrl+S"
                 >
-                  Save Draft
+                  💾 Save
                 </button>
                 <button
                   onClick={handleLoadDraft}
                   className="px-4 py-2 text-sm bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg hover:from-blue-600 hover:to-cyan-600 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 font-medium"
                 >
-                  Load Draft
+                  📂 Load
                 </button>
                 <button
                   onClick={handleClearDraft}
-                  className="px-4 py-2 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 font-medium"
+                  className="px-4 py-2 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 font-medium"
                 >
-                  Clear
+                  🗑️ Clear
                 </button>
               </div>
             </div>
+
+            {/* Progress Indicator */}
+            {showWizard && (
+              <div className="mb-6 relative z-10">
+                <ProgressIndicator
+                  currentStep={currentStep}
+                  totalSteps={progressSteps.length}
+                  steps={progressSteps}
+                />
+              </div>
+            )}
 
             <div className="space-y-6 relative z-10">
               {/* Document Type Dropdown */}
@@ -445,32 +593,6 @@ export default function Home() {
                     </option>
                   ))}
                 </select>
-              </div>
-
-              {/* Date Field */}
-              <div>
-                <label
-                  htmlFor="date"
-                  className="block text-sm font-medium text-gray-700 mb-2"
-                >
-                  Document Date
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="date"
-                    id="date"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setDate(format(new Date(), "yyyy-MM-dd"))}
-                    className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
-                  >
-                    Today
-                  </button>
-                </div>
               </div>
 
               {/* Recipient Information */}
@@ -851,6 +973,26 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* Template Gallery Modal */}
+      <TemplateGallery
+        isOpen={showTemplateGallery}
+        onClose={() => setShowTemplateGallery(false)}
+        onSelectTemplate={handleSelectTemplate}
+      />
+
+      {/* Statistics Panel */}
+      <StatisticsPanel
+        isOpen={showStatistics}
+        onClose={() => setShowStatistics(false)}
+      />
+
+      {/* Document History */}
+      <DocumentHistory
+        isOpen={showHistory}
+        onClose={() => setShowHistory(false)}
+        onLoadDocument={handleLoadFromHistory}
+      />
     </>
   );
 }
