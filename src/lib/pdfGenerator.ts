@@ -114,10 +114,20 @@ export async function generatePDF(options: PDFOptions): Promise<Blob> {
   }
 
   // Add spacing before signature area
-  const signatureAreaStart = Math.max(currentY + 20, pageHeight - margin - 50);
+  // Ensure we have enough space at the bottom (at least 40mm for signature + signatory info)
+  const minFooterSpace = 40;
+  let signatureY = currentY + 20;
+  
+  // Check if we need a new page for the signature area
+  if (signatureY > pageHeight - margin - minFooterSpace) {
+    doc.addPage();
+    signatureY = pageHeight - margin - minFooterSpace;
+  } else {
+    // Position signature area with proper spacing from bottom
+    signatureY = Math.max(signatureY, pageHeight - margin - minFooterSpace);
+  }
   
   // Add signature line (dotted line for DocuSign)
-  const signatureY = signatureAreaStart;
   doc.setDrawColor(0, 0, 0);
   doc.setLineWidth(0.5);
   
@@ -129,10 +139,23 @@ export async function generatePDF(options: PDFOptions): Promise<Blob> {
   }
 
   // Add signatory information below signature line
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "normal");
-  doc.text(options.signatoryName, margin, signatureY + 8);
-  doc.text(options.signatoryTitle, margin, signatureY + 15);
+  // Ensure it fits on the page
+  const signatoryNameY = signatureY + 8;
+  const signatoryTitleY = signatureY + 15;
+  
+  // Check if signatory info fits on current page, if not add new page
+  if (signatoryTitleY > pageHeight - margin) {
+    doc.addPage();
+    const newSignatureY = pageHeight - margin - minFooterSpace;
+    doc.line(signatureLineX, newSignatureY, signatureLineX + signatureLineWidth, newSignatureY);
+    doc.text(options.signatoryName, margin, newSignatureY + 8);
+    doc.text(options.signatoryTitle, margin, newSignatureY + 15);
+  } else {
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "normal");
+    doc.text(options.signatoryName, margin, signatoryNameY);
+    doc.text(options.signatoryTitle, margin, signatoryTitleY);
+  }
 
   // Generate PDF blob
   const pdfBlob = doc.output("blob");
