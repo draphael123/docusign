@@ -294,14 +294,8 @@ export async function generatePDF(options: PDFOptions): Promise<Blob> {
 
   // Function to add footer to current page
   const addFooterToPage = () => {
-    // Draw separator line above footer (positioned near bottom with space for content)
-    const separatorY = pageHeight - 20; // Position separator line 20mm from bottom
-    doc.setDrawColor(0, 0, 0);
-    doc.setLineWidth(0.3);
-    doc.line(margin, separatorY, pageWidth - margin, separatorY);
-
-    // Add footer contact information
-    const footerY = separatorY + 4;
+    // Add footer contact information (no separator line, no labels)
+    const footerY = pageHeight - 15; // Position footer 15mm from bottom
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(0, 0, 0);
@@ -314,24 +308,15 @@ export async function generatePDF(options: PDFOptions): Promise<Blob> {
     const column2X = footerStartX + columnWidth;
     const column3X = footerStartX + (columnWidth * 2);
 
-    // Column 1: Call
-    doc.setFont("helvetica", "bold");
-    doc.text("Call", column1X, footerY);
-    doc.setFont("helvetica", "normal");
-    doc.text(footerPhone, column1X, footerY + 4);
+    // Column 1: Call (just the phone number, no label)
+    doc.text(footerPhone, column1X, footerY);
 
-    // Column 2: Message
-    doc.setFont("helvetica", "bold");
-    doc.text("Message", column2X, footerY);
-    doc.setFont("helvetica", "normal");
-    doc.text(footerEmail, column2X, footerY + 4);
+    // Column 2: Message (just the email, no label)
+    doc.text(footerEmail, column2X, footerY);
 
-    // Column 3: Office Address
-    doc.setFont("helvetica", "bold");
-    doc.text("Office Address", column3X, footerY);
-    doc.setFont("helvetica", "normal");
+    // Column 3: Office Address (just the address, no label)
     const addressLines = footerAddress.split(", ");
-    let addressY = footerY + 4;
+    let addressY = footerY;
     for (const line of addressLines) {
       if (line.trim()) {
         doc.text(line.trim(), column3X, addressY);
