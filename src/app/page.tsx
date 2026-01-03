@@ -369,24 +369,36 @@ export default function Home() {
   return (
     <>
       <Toaster position="top-right" />
-      <div className="min-h-screen py-6 sm:py-12 px-4 sm:px-6 lg:px-8">
+      {/* Animated background elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="absolute top-20 left-10 w-72 h-72 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-float"></div>
+        <div className="absolute top-40 right-10 w-72 h-72 bg-blue-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-float" style={{ animationDelay: '2s' }}></div>
+        <div className="absolute -bottom-8 left-1/2 w-72 h-72 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-float" style={{ animationDelay: '4s' }}></div>
+      </div>
+      
+      <div className="min-h-screen py-6 sm:py-12 px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="max-w-4xl mx-auto">
-          <div className="bg-white shadow-2xl rounded-2xl p-6 sm:p-8 backdrop-blur-sm border border-white/20">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
+          <div className="bg-white/95 shadow-2xl rounded-2xl p-6 sm:p-8 backdrop-blur-md border border-white/30 relative overflow-hidden">
+            {/* Shimmer effect overlay */}
+            <div className="absolute inset-0 shimmer pointer-events-none"></div>
+            
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 relative z-10">
               <div className="mb-4 sm:mb-0">
-                <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-2">
-                  Document Template Generator
+                <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-purple-600 via-blue-600 to-pink-600 bg-clip-text text-transparent mb-2">
+                  ✨ Document Template Generator
                 </h1>
-                <p className="text-sm text-gray-600 font-medium">
+                <p className="text-sm text-gray-600 font-medium flex items-center gap-2">
+                  <span className="inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
                   Generate professional PDF templates ready to upload to DocuSign
                 </p>
               </div>
-              <div className="mt-4 sm:mt-0">
+              <div className="mt-4 sm:mt-0 flex gap-2">
                 <Link
                   href="/suggestions"
-                  className="inline-block px-4 py-2 text-sm bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-lg hover:from-indigo-600 hover:to-purple-600 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 font-medium transition-all"
+                  className="inline-block px-4 py-2 text-sm bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-lg hover:from-indigo-600 hover:to-purple-600 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 hover:scale-105 font-medium transition-all relative overflow-hidden group"
                 >
-                  💡 Suggestions & Feedback
+                  <span className="relative z-10">💡 Suggestions & Feedback</span>
+                  <span className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 opacity-0 group-hover:opacity-100 transition-opacity"></span>
                 </Link>
               </div>
               <div className="mt-4 sm:mt-0 flex gap-2">
