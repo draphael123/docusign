@@ -1,0 +1,84 @@
+# Document Template Generator
+
+A Next.js application for generating PDF document templates with dynamic content, header images, and signatory information.
+
+## Features
+
+- **Document Type Selection**: Choose between "Letter of Recommendation" or "Letter of Termination"
+- **Signatory Selection**: Select from pre-configured signatories (Dorn Stemper or Lindsay Burden)
+- **Dynamic PDF Generation**: Automatically generates PDFs with header image, body text, and signatory information
+- **PDF Download**: Automatically downloads generated PDF templates
+
+## Project Structure
+
+```
+├── src/
+│   ├── app/
+│   │   ├── globals.css               # Global styles with Tailwind
+│   │   ├── layout.tsx                # Root layout
+│   │   └── page.tsx                  # Main form page
+│   ├── data/
+│   │   └── signatories.ts            # Signatory configuration
+│   └── lib/
+│       └── pdfGenerator.ts           # PDF generation utility
+├── public/
+│   └── header.png                    # Header image (add your image here)
+└── package.json
+```
+
+## Setup Instructions
+
+1. **Install Dependencies** (already done):
+   ```bash
+   npm install
+   ```
+
+2. **Add Header Image**:
+   - Place your header image as `header.png` in the `public/` directory
+   - The PDF generator will automatically include this image at the top of each document
+
+3. **Run Development Server**:
+   ```bash
+   npm run dev
+   ```
+
+5. **Open in Browser**:
+   - Navigate to `http://localhost:3000`
+
+## Usage
+
+1. Select a **Document Type** from the dropdown
+2. Choose a **Signatory** using the radio buttons
+3. Enter the **Document Body** text in the textarea
+4. Click **Generate PDF** to create and download the PDF template
+
+## Signatory Configuration
+
+Signatories are configured in `src/data/signatories.ts`:
+
+- **Dorn Stemper** - Executive Director
+- **Lindsay Burden** - Operations Manager
+
+To add more signatories, edit the `signatories` array in this file.
+
+## PDF Generation
+
+The PDF generator automatically:
+1. Loads the header image from `/public/header.png` (if available)
+2. Adds the document type as a title
+3. Formats the body text with proper line breaks
+4. Places the signatory name and title at the bottom
+5. Downloads the PDF with a descriptive filename
+
+## Technologies Used
+
+- **Next.js 14** - React framework with App Router
+- **TypeScript** - Type safety
+- **Tailwind CSS** - Styling
+- **jsPDF** - PDF generation
+
+## Notes
+
+- The PDF generator will automatically load the header image from `/public/header.png` if it exists. If the image is not found, it will display a placeholder.
+- The generated PDFs are downloaded directly to the user's device with a filename based on the document type and timestamp.
+
