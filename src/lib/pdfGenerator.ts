@@ -212,30 +212,66 @@ export async function generatePDF(options: PDFOptions): Promise<Blob> {
     doc.line(signatureLineX + i, signatureY, signatureLineX + i + 1, signatureY);
   }
 
-  // Add signatory information below signature line
+  // Add "Sincerely," and signatory information below signature line
   // Calculate positions ensuring they fit on the page
-  const signatoryNameY = signatureY + 8;
-  const signatoryTitleY = signatureY + 18; // Increased spacing between name and title
+  let currentSignatoryY = signatureY + 8;
+  
+  // Calculate total height needed for signatory info (including "Sincerely,")
+  let signatoryInfoHeight = 8; // "Sincerely," with spacing
+  signatoryInfoHeight += 6; // Name
+  signatoryInfoHeight += 6; // Title
+  if (options.signatoryCompany) signatoryInfoHeight += 6;
+  if (options.signatoryPhone) signatoryInfoHeight += 5;
+  if (options.signatoryEmail) signatoryInfoHeight += 5;
   
   // Double-check that everything fits with extra safety margin
   const safetyMargin = 10; // Extra margin to ensure nothing gets cut off
-  if (signatoryTitleY + safetyMargin > pageHeight - bottomMargin) {
+  const totalFooterHeight = requiredFooterHeight + signatoryInfoHeight;
+  
+  if (currentSignatoryY + signatoryInfoHeight + safetyMargin > pageHeight - bottomMargin) {
     // If still doesn't fit, add new page
     doc.addPage();
-    const newSignatureY = pageHeight - bottomMargin - requiredFooterHeight;
+    const newSignatureY = pageHeight - bottomMargin - totalFooterHeight;
     // Redraw signature line
     for (let i = 0; i < signatureLineWidth; i += 2) {
       doc.line(signatureLineX + i, newSignatureY, signatureLineX + i + 1, newSignatureY);
     }
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "normal");
-    doc.text(options.signatoryName, margin, newSignatureY + 8);
-    doc.text(options.signatoryTitle, margin, newSignatureY + 18);
-  } else {
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "normal");
-    doc.text(options.signatoryName, margin, signatoryNameY);
-    doc.text(options.signatoryTitle, margin, signatoryTitleY);
+    currentSignatoryY = newSignatureY + 8;
+  }
+  
+  // Add "Sincerely," greeting below signature line
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "normal");
+  doc.text("Sincerely,", margin, currentSignatoryY);
+  currentSignatoryY += 8; // Space after "Sincerely,"
+  
+  // Add signatory information
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "normal");
+  doc.text(options.signatoryName, margin, currentSignatoryY);
+  currentSignatoryY += 6;
+  
+  doc.text(options.signatoryTitle, margin, currentSignatoryY);
+  currentSignatoryY += 6;
+  
+  if (options.signatoryCompany) {
+    doc.text(options.signatoryCompany, margin, currentSignatoryY);
+    currentSignatoryY += 6;
+  }
+  
+  if (options.signatoryPhone) {
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text(options.signatoryPhone, margin, currentSignatoryY);
+    currentSignatoryY += 5;
+    doc.setTextColor(0, 0, 0);
+  }
+  
+  if (options.signatoryEmail) {
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text(options.signatoryEmail, margin, currentSignatoryY);
+    doc.setTextColor(0, 0, 0);
   }
 
   // Generate PDF blob
