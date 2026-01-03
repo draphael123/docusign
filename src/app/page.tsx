@@ -30,6 +30,49 @@ export default function Home() {
   );
   const [bodyText, setBodyText] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
+  const [aiPrompt, setAiPrompt] = useState<string>("");
+  const [isGeneratingText, setIsGeneratingText] = useState<boolean>(false);
+  const [showAiOption, setShowAiOption] = useState<boolean>(false);
+
+  const handleGenerateText = async () => {
+    if (!aiPrompt.trim()) {
+      alert("Please enter a prompt for text generation");
+      return;
+    }
+
+    setIsGeneratingText(true);
+    try {
+      const response = await fetch("/api/generate-text", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          prompt: aiPrompt,
+          documentType: documentType,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to generate text");
+      }
+
+      if (data.success && data.text) {
+        setBodyText(data.text);
+        setShowAiOption(false);
+        setAiPrompt("");
+      } else {
+        throw new Error("No text generated");
+      }
+    } catch (error: any) {
+      console.error("Error generating text:", error);
+      alert(error.message || "Error generating text. Please try again.");
+    } finally {
+      setIsGeneratingText(false);
+    }
+  };
 
   const handleGeneratePDF = async () => {
     if (!bodyText.trim()) {
@@ -136,21 +179,57 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Document Body Textarea */}
+            {/* AI Text Generation Option */}
             <div>
-              <label
-                htmlFor="bodyText"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Document Body
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Document Body
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowAiOption(!showAiOption)}
+                  className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                >
+                  {showAiOption ? "Hide AI Generator" : "Use AI to Generate Text"}
+                </button>
+              </div>
+
+              {showAiOption ? (
+                <div className="space-y-3 mb-3">
+                  <div>
+                    <label
+                      htmlFor="aiPrompt"
+                      className="block text-xs font-medium text-gray-600 mb-1"
+                    >
+                      Describe what you want in the document:
+                    </label>
+                    <textarea
+                      id="aiPrompt"
+                      value={aiPrompt}
+                      onChange={(e) => setAiPrompt(e.target.value)}
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="e.g., 'Write a letter of recommendation for John Doe, a software engineer with 5 years of experience, highlighting his technical skills and leadership abilities...'"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleGenerateText}
+                    disabled={isGeneratingText || !aiPrompt.trim()}
+                    className="w-full bg-green-600 text-white py-2 px-4 rounded-md font-medium hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isGeneratingText ? "Generating..." : "Generate Text with AI"}
+                  </button>
+                </div>
+              ) : null}
+
               <textarea
                 id="bodyText"
                 value={bodyText}
                 onChange={(e) => setBodyText(e.target.value)}
                 rows={10}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Enter the document body text here..."
+                placeholder="Enter the document body text here, or use AI to generate it..."
               />
             </div>
 
