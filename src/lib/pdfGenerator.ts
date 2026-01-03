@@ -43,25 +43,23 @@ export async function generatePDF(options: PDFOptions): Promise<Blob> {
         img.src = imageUrl;
       });
       
-      // Calculate dimensions to fit header area while maintaining aspect ratio
-      const maxHeaderHeight = 40; // Maximum header height in mm
-      const maxHeaderWidth = contentWidth; // Maximum header width
+      // Calculate dimensions to fill entire page width while maintaining aspect ratio
+      const fullPageWidth = pageWidth; // Full page width (no margins)
       
       let headerWidth = img.width;
       let headerHeight = img.height;
       
-      // Scale to fit within max dimensions while maintaining aspect ratio
-      const widthRatio = maxHeaderWidth / headerWidth;
-      const heightRatio = maxHeaderHeight / headerHeight;
-      const scale = Math.min(widthRatio, heightRatio);
+      // Scale to fill entire page width while maintaining aspect ratio
+      const scale = fullPageWidth / headerWidth;
       
       headerWidth = headerWidth * scale;
       headerHeight = headerHeight * scale;
       
-      // Center the image
-      const imageX = margin + (contentWidth - headerWidth) / 2;
+      // Position at top-left corner (no margin)
+      const imageX = 0;
+      const imageY = 0;
       
-      doc.addImage(imageUrl, imageType, imageX, margin, headerWidth, headerHeight);
+      doc.addImage(imageUrl, imageType, imageX, imageY, headerWidth, headerHeight);
       URL.revokeObjectURL(imageUrl);
     } else {
       // Fallback: create a placeholder rectangle if image not found
@@ -87,8 +85,9 @@ export async function generatePDF(options: PDFOptions): Promise<Blob> {
     });
   }
 
-  // Add document type title
-  let yPosition = margin + 40;
+  // Add document type title (positioned after header image)
+  // Calculate yPosition based on header height
+  let yPosition = margin + 50; // Start below header with some spacing
   doc.setFontSize(16);
   doc.setTextColor(0, 0, 0);
   doc.setFont("helvetica", "bold");
