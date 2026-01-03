@@ -36,6 +36,9 @@ interface DraftData {
   subject: string;
   customSignatoryName: string;
   customSignatoryTitle: string;
+  customSignatoryCompany: string;
+  customSignatoryPhone: string;
+  customSignatoryEmail: string;
   fontSize: number;
   lineSpacing: number;
 }
@@ -48,6 +51,9 @@ export default function Home() {
   const [useCustomSignatory, setUseCustomSignatory] = useState<boolean>(false);
   const [customSignatoryName, setCustomSignatoryName] = useState<string>("");
   const [customSignatoryTitle, setCustomSignatoryTitle] = useState<string>("");
+  const [customSignatoryCompany, setCustomSignatoryCompany] = useState<string>("");
+  const [customSignatoryPhone, setCustomSignatoryPhone] = useState<string>("");
+  const [customSignatoryEmail, setCustomSignatoryEmail] = useState<string>("");
   const [bodyText, setBodyText] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [aiPrompt, setAiPrompt] = useState<string>("");
@@ -182,6 +188,9 @@ export default function Home() {
     setSubject("");
     setCustomSignatoryName("");
     setCustomSignatoryTitle("");
+    setCustomSignatoryCompany("");
+    setCustomSignatoryPhone("");
+    setCustomSignatoryEmail("");
     setUseCustomSignatory(false);
     setFontSize(11);
     setLineSpacing(1.5);
@@ -258,6 +267,9 @@ export default function Home() {
         bodyText,
         signatoryName: signatory.name,
         signatoryTitle: signatory.title,
+        signatoryCompany: signatory.company,
+        signatoryPhone: signatory.phone,
+        signatoryEmail: signatory.email,
         date,
         recipientName,
         recipientTitle,
@@ -301,6 +313,9 @@ export default function Home() {
         bodyText,
         signatoryName: signatory.name,
         signatoryTitle: signatory.title,
+        signatoryCompany: signatory.company,
+        signatoryPhone: signatory.phone,
+        signatoryEmail: signatory.email,
         date,
         recipientName,
         recipientTitle,

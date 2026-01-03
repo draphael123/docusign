@@ -5,6 +5,9 @@ export interface PDFOptions {
   bodyText: string;
   signatoryName: string;
   signatoryTitle: string;
+  signatoryCompany?: string;
+  signatoryPhone?: string;
+  signatoryEmail?: string;
   date?: string;
   recipientName?: string;
   recipientTitle?: string;
