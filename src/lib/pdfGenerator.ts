@@ -21,8 +21,16 @@ export async function generatePDF(options: PDFOptions): Promise<Blob> {
 
   // Add header image
   try {
-    // Try to load the header image from /public/header.png
-    const imageResponse = await fetch("/header.png");
+    // Try to load the header image from /public/header.png or /public/header.jpg
+    let imageResponse = await fetch("/header.png");
+    let imageType = "PNG";
+    
+    if (!imageResponse.ok) {
+      // Try JPG if PNG not found
+      imageResponse = await fetch("/header.jpg");
+      imageType = "JPEG";
+    }
+    
     if (imageResponse.ok) {
       const imageBlob = await imageResponse.blob();
       const imageUrl = URL.createObjectURL(imageBlob);
@@ -35,11 +43,25 @@ export async function generatePDF(options: PDFOptions): Promise<Blob> {
         img.src = imageUrl;
       });
       
-      const headerHeight = 30; // Fixed height for header
-      const imageWidth = (img.width / img.height) * headerHeight;
-      const imageX = margin + (contentWidth - imageWidth) / 2;
+      // Calculate dimensions to fit header area while maintaining aspect ratio
+      const maxHeaderHeight = 40; // Maximum header height in mm
+      const maxHeaderWidth = contentWidth; // Maximum header width
       
-      doc.addImage(imageUrl, "PNG", imageX, margin, imageWidth, headerHeight);
+      let headerWidth = img.width;
+      let headerHeight = img.height;
+      
+      // Scale to fit within max dimensions while maintaining aspect ratio
+      const widthRatio = maxHeaderWidth / headerWidth;
+      const heightRatio = maxHeaderHeight / headerHeight;
+      const scale = Math.min(widthRatio, heightRatio);
+      
+      headerWidth = headerWidth * scale;
+      headerHeight = headerHeight * scale;
+      
+      // Center the image
+      const imageX = margin + (contentWidth - headerWidth) / 2;
+      
+      doc.addImage(imageUrl, imageType, imageX, margin, headerWidth, headerHeight);
       URL.revokeObjectURL(imageUrl);
     } else {
       // Fallback: create a placeholder rectangle if image not found
