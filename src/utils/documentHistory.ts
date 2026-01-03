@@ -38,3 +38,5 @@ export function removeFromHistory(id: string) {
   localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
 }
 
+
+

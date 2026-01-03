@@ -1,5 +1,6 @@
 import jsPDF from "jspdf";
 
+// PDF Generator - No footer version
 export interface PDFOptions {
   documentType: string;
   bodyText: string;
