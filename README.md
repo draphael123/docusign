@@ -28,7 +28,9 @@ A Next.js application for generating PDF document templates with dynamic content
 
 ## Setup Instructions
 
-1. **Install Dependencies** (already done):
+### Local Development
+
+1. **Install Dependencies**:
    ```bash
    npm install
    ```
@@ -42,8 +44,28 @@ A Next.js application for generating PDF document templates with dynamic content
    npm run dev
    ```
 
-5. **Open in Browser**:
+4. **Open in Browser**:
    - Navigate to `http://localhost:3000`
+
+### Deployment to Vercel
+
+The project is configured for easy deployment to Vercel:
+
+1. **Push to GitHub** (already done):
+   - Repository: https://github.com/draphael123/docusign.git
+
+2. **Deploy to Vercel**:
+   - Go to [Vercel](https://vercel.com)
+   - Click "Add New Project"
+   - Import the GitHub repository: `draphael123/docusign`
+   - Vercel will auto-detect Next.js and configure the build settings
+   - Click "Deploy"
+
+3. **Environment Variables** (if needed):
+   - No environment variables required for basic PDF generation
+   - Add any custom configuration in Vercel's project settings if needed
+
+4. **Your app will be live** at: `https://your-project-name.vercel.app`
 
 ## Usage
 
@@ -56,7 +78,7 @@ A Next.js application for generating PDF document templates with dynamic content
 
 Signatories are configured in `src/data/signatories.ts`:
 
-- **Dorn Stemper** - Executive Director
+- **Doron Stember** - Executive Director
 - **Lindsay Burden** - Operations Manager
 
 To add more signatories, edit the `signatories` array in this file.
