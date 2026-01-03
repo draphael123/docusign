@@ -72,7 +72,7 @@ export default function SuggestionsPage() {
                 Suggestions & Feedback
               </h1>
               <p className="text-sm text-gray-600 font-medium">
-                We'd love to hear your thoughts! Share your suggestions, report issues, or request new features.
+                We&apos;d love to hear your thoughts! Share your suggestions, report issues, or request new features.
               </p>
             </div>
 
