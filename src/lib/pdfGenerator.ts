@@ -15,6 +15,9 @@ export interface PDFOptions {
   subject?: string;
   fontSize?: number;
   lineSpacing?: number;
+  footerPhone?: string;
+  footerEmail?: string;
+  footerAddress?: string;
 }
 
 export async function generatePDF(options: PDFOptions): Promise<Blob> {
@@ -283,6 +286,67 @@ export async function generatePDF(options: PDFOptions): Promise<Blob> {
     doc.text(options.signatoryEmail, margin, currentSignatoryY);
     doc.setTextColor(0, 0, 0);
   }
+
+  // Add footer contact information at the bottom of each page
+  const footerPhone = options.footerPhone || "(213) 237-1454";
+  const footerEmail = options.footerEmail || "support@fountain.net";
+  const footerAddress = options.footerAddress || "2064 Park St, Jacksonville FL 32204";
+
+  // Function to add footer to current page
+  const addFooterToPage = (pageNum: number) => {
+    // Draw separator line above footer
+    const separatorY = pageHeight - 25; // Position separator line
+    doc.setDrawColor(0, 0, 0);
+    doc.setLineWidth(0.3);
+    doc.line(margin, separatorY, pageWidth - margin, separatorY);
+
+    // Add footer contact information
+    const footerY = separatorY + 5;
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(0, 0, 0);
+
+    // Calculate positions for three columns
+    const footerStartX = margin;
+    const footerWidth = pageWidth - 2 * margin;
+    const columnWidth = footerWidth / 3;
+    const column1X = footerStartX;
+    const column2X = footerStartX + columnWidth;
+    const column3X = footerStartX + (columnWidth * 2);
+
+    // Column 1: Call
+    doc.setFont("helvetica", "bold");
+    doc.text("Call", column1X, footerY);
+    doc.setFont("helvetica", "normal");
+    doc.text(footerPhone, column1X, footerY + 4);
+
+    // Column 2: Message
+    doc.setFont("helvetica", "bold");
+    doc.text("Message", column2X, footerY);
+    doc.setFont("helvetica", "normal");
+    doc.text(footerEmail, column2X, footerY + 4);
+
+    // Column 3: Office Address
+    doc.setFont("helvetica", "bold");
+    doc.text("Office Address", column3X, footerY);
+    doc.setFont("helvetica", "normal");
+    const addressLines = footerAddress.split(", ");
+    let addressY = footerY + 4;
+    for (const line of addressLines) {
+      doc.text(line.trim(), column3X, addressY);
+      addressY += 4;
+    }
+  };
+
+  // Add footer to all pages
+  const totalPages = doc.internal.pages.length - 1; // jsPDF uses 1-based indexing
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    addFooterToPage(i);
+  }
+
+  // Return to the last page
+  doc.setPage(totalPages);
 
   // Generate PDF blob
   const pdfBlob = doc.output("blob");
