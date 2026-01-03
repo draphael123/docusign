@@ -165,48 +165,9 @@ export async function generatePDF(options: PDFOptions): Promise<Blob> {
     currentY += lineHeight;
   }
 
-  // Add spacing before signature area
-  // Ensure we have enough space at the bottom for signature + signatory info + padding
+  // Add spacing before signature area (no signature line, just "Sincerely,")
   const spacingBeforeSignature = 20;
-  let signatureY = currentY + spacingBeforeSignature;
-  
-  // Calculate required footer height more accurately
-  // Signature line (1mm) + spacing (8mm) + "Sincerely," (5mm) + spacing (8mm) + name (5mm) + spacing (6mm) + title (5mm) + spacing (6mm) + company (5mm) + phone (5mm) + email (5mm) + bottom margin (25mm) = 84mm
-  let calculatedFooterHeight = 1 + 8 + 5 + 8 + 6 + 6 + 5; // Base: signature line + spacing + "Sincerely," + spacing + name + spacing + title
-  if (options.signatoryCompany) calculatedFooterHeight += 6; // Company
-  if (options.signatoryPhone) calculatedFooterHeight += 5; // Phone
-  if (options.signatoryEmail) calculatedFooterHeight += 5; // Email
-  calculatedFooterHeight += 25; // Bottom margin
-  
-  const requiredFooterHeight = Math.max(calculatedFooterHeight, 70); // Minimum 70mm
-  const bottomMargin = margin + 10; // Extra padding for safety
-  
-  if (signatureY + requiredFooterHeight > pageHeight - bottomMargin) {
-    // Add new page if signature area won't fit
-    doc.addPage();
-    signatureY = pageHeight - bottomMargin - requiredFooterHeight;
-  } else {
-    // Ensure minimum spacing from bottom
-    const maxSignatureY = pageHeight - bottomMargin - requiredFooterHeight;
-    if (signatureY > maxSignatureY) {
-      signatureY = maxSignatureY;
-    }
-  }
-  
-  // Add signature line (dotted line for DocuSign)
-  doc.setDrawColor(0, 0, 0);
-  doc.setLineWidth(0.5);
-  
-  // Draw signature line (80mm wide)
-  const signatureLineWidth = 80;
-  const signatureLineX = margin;
-  for (let i = 0; i < signatureLineWidth; i += 2) {
-    doc.line(signatureLineX + i, signatureY, signatureLineX + i + 1, signatureY);
-  }
-
-  // Add "Sincerely," and signatory information below signature line
-  // Calculate positions ensuring they fit on the page
-  let currentSignatoryY = signatureY + 8;
+  let currentSignatoryY = currentY + spacingBeforeSignature;
   
   // Calculate total height needed for signatory info (including "Sincerely,")
   let signatoryInfoHeight = 8; // "Sincerely," with spacing
@@ -216,22 +177,12 @@ export async function generatePDF(options: PDFOptions): Promise<Blob> {
   if (options.signatoryPhone) signatoryInfoHeight += 5;
   if (options.signatoryEmail) signatoryInfoHeight += 5;
   
-  // Double-check that everything fits with extra safety margin
-  const safetyMargin = 10; // Extra margin to ensure nothing gets cut off
-  const totalFooterHeight = requiredFooterHeight + signatoryInfoHeight;
-  
-  // Ensure we have enough space - check if footer will fit
-  const totalNeededHeight = signatoryInfoHeight + safetyMargin + 5; // Extra 5mm buffer
-  if (currentSignatoryY + totalNeededHeight > pageHeight - bottomMargin) {
-    // If still doesn't fit, add new page
+  // Ensure we have enough space - check if signatory info will fit
+  const bottomMargin = 40; // Reserve space for footer
+  if (currentSignatoryY + signatoryInfoHeight > pageHeight - bottomMargin) {
+    // If doesn't fit, add new page
     doc.addPage();
-    // Calculate new signature position with proper spacing
-    const newSignatureY = pageHeight - bottomMargin - totalNeededHeight - 5; // Extra 5mm above footer
-    // Redraw signature line
-    for (let i = 0; i < signatureLineWidth; i += 2) {
-      doc.line(signatureLineX + i, newSignatureY, signatureLineX + i + 1, newSignatureY);
-    }
-    currentSignatoryY = newSignatureY + 8;
+    currentSignatoryY = margin + 20; // Start near top of new page
   }
   
   // Add "Sincerely," greeting below signature line
@@ -276,10 +227,8 @@ export async function generatePDF(options: PDFOptions): Promise<Blob> {
 
   // Function to add footer to current page
   const addFooterToPage = () => {
-    // Add footer contact information without labels - just the info
-    const footerY = pageHeight - 15; // Position footer 15mm from bottom
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
+    // Add footer with bold labels and contact information below
+    const footerY = pageHeight - 20; // Position footer 20mm from bottom
     doc.setTextColor(0, 0, 0);
 
     // Calculate positions for three columns
@@ -290,15 +239,30 @@ export async function generatePDF(options: PDFOptions): Promise<Blob> {
     const column2X = footerStartX + columnWidth;
     const column3X = footerStartX + (columnWidth * 2);
 
-    // Column 1: Phone number (no label)
-    doc.text(footerPhone, column1X, footerY);
+    // Column 1: Call label (bold) and phone number
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.text("Call", column1X, footerY);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text(footerPhone, column1X, footerY + 5);
 
-    // Column 2: Email (no label)
-    doc.text(footerEmail, column2X, footerY);
+    // Column 2: Message label (bold) and email
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.text("Message", column2X, footerY);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text(footerEmail, column2X, footerY + 5);
 
-    // Column 3: Address (no label)
+    // Column 3: Office Address label (bold) and address
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.text("Office Address", column3X, footerY);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
     const addressLines = footerAddress.split(", ");
-    let addressY = footerY;
+    let addressY = footerY + 5;
     for (const line of addressLines) {
       if (line.trim()) {
         doc.text(line.trim(), column3X, addressY);
