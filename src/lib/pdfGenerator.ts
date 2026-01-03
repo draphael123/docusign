@@ -59,11 +59,15 @@ export async function generatePDF(options: PDFOptions): Promise<Blob> {
       let headerWidth = img.width;
       let headerHeight = img.height;
       
+      // CROP: Only use the top 20% of the image (header only, exclude footer)
+      // The original image contains both header AND footer, we only want the top part
+      const cropPercentage = 0.20; // Only use top 20% of image
+      
       // Scale to fill entire page width while maintaining aspect ratio
       const scale = fullPageWidth / headerWidth;
       
       headerWidth = headerWidth * scale;
-      headerHeight = headerHeight * scale;
+      headerHeight = (headerHeight * cropPercentage) * scale; // Use only top portion
       
       // Position at top-left corner (no margin)
       const imageX = 0;
