@@ -2,6 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Make input and textarea text darker for better readability */
+input[type="text"],
+input[type="email"],
+input[type="date"],
+textarea,
+select {
+  color: #111827 !important; /* Very dark gray, almost black */
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #9ca3af !important; /* Medium gray for placeholders */
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;

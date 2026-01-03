@@ -185,9 +185,16 @@ export async function generatePDF(options: PDFOptions): Promise<Blob> {
   const spacingBeforeSignature = 20;
   let signatureY = currentY + spacingBeforeSignature;
   
-  // Calculate required footer height: signature line (1mm) + spacing (8mm) + name (5mm) + spacing (10mm) + title (5mm) + bottom margin (20mm) + extra padding (5mm) = 54mm
-  const requiredFooterHeight = 54;
-  const bottomMargin = margin + 5; // Extra padding for safety
+  // Calculate required footer height more accurately
+  // Signature line (1mm) + spacing (8mm) + "Sincerely," (5mm) + spacing (8mm) + name (5mm) + spacing (6mm) + title (5mm) + spacing (6mm) + company (5mm) + phone (5mm) + email (5mm) + bottom margin (25mm) = 84mm
+  let calculatedFooterHeight = 1 + 8 + 5 + 8 + 6 + 6 + 5; // Base: signature line + spacing + "Sincerely," + spacing + name + spacing + title
+  if (options.signatoryCompany) calculatedFooterHeight += 6; // Company
+  if (options.signatoryPhone) calculatedFooterHeight += 5; // Phone
+  if (options.signatoryEmail) calculatedFooterHeight += 5; // Email
+  calculatedFooterHeight += 25; // Bottom margin
+  
+  const requiredFooterHeight = Math.max(calculatedFooterHeight, 70); // Minimum 70mm
+  const bottomMargin = margin + 10; // Extra padding for safety
   
   if (signatureY + requiredFooterHeight > pageHeight - bottomMargin) {
     // Add new page if signature area won't fit
@@ -228,10 +235,13 @@ export async function generatePDF(options: PDFOptions): Promise<Blob> {
   const safetyMargin = 10; // Extra margin to ensure nothing gets cut off
   const totalFooterHeight = requiredFooterHeight + signatoryInfoHeight;
   
-  if (currentSignatoryY + signatoryInfoHeight + safetyMargin > pageHeight - bottomMargin) {
+  // Ensure we have enough space - check if footer will fit
+  const totalNeededHeight = signatoryInfoHeight + safetyMargin + 5; // Extra 5mm buffer
+  if (currentSignatoryY + totalNeededHeight > pageHeight - bottomMargin) {
     // If still doesn't fit, add new page
     doc.addPage();
-    const newSignatureY = pageHeight - bottomMargin - totalFooterHeight;
+    // Calculate new signature position with proper spacing
+    const newSignatureY = pageHeight - bottomMargin - totalNeededHeight - 5; // Extra 5mm above footer
     // Redraw signature line
     for (let i = 0; i < signatureLineWidth; i += 2) {
       doc.line(signatureLineX + i, newSignatureY, signatureLineX + i + 1, newSignatureY);
