@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { signatories } from "@/data/signatories";
 import { generatePDF } from "@/lib/pdfGenerator";
 import { Toaster, toast } from "react-hot-toast";
-import { format } from "date-fns";
 import Link from "next/link";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { documentTemplates, DocumentTemplate } from "@/data/templates";
@@ -38,7 +37,6 @@ interface DraftData {
   documentType: string;
   selectedSignatory: string;
   bodyText: string;
-  date: string;
   recipientName: string;
   recipientTitle: string;
   recipientAddress: string;
@@ -68,7 +66,6 @@ export default function Home() {
   const [aiPrompt, setAiPrompt] = useState<string>("");
   const [isGeneratingText, setIsGeneratingText] = useState<boolean>(false);
   const [showAiOption, setShowAiOption] = useState<boolean>(false);
-  const [date, setDate] = useState<string>(format(new Date(), "yyyy-MM-dd"));
   const [recipientName, setRecipientName] = useState<string>("");
   const [recipientTitle, setRecipientTitle] = useState<string>("");
   const [recipientAddress, setRecipientAddress] = useState<string>("");
@@ -162,7 +159,6 @@ export default function Home() {
         setDocumentType(draft.documentType || "Letter of Recommendation");
         setSelectedSignatory(draft.selectedSignatory || signatories[0].id);
         setBodyText(draft.bodyText || "");
-        setDate(draft.date || format(new Date(), "yyyy-MM-dd"));
         setRecipientName(draft.recipientName || "");
         setRecipientTitle(draft.recipientTitle || "");
         setRecipientAddress(draft.recipientAddress || "");
@@ -184,7 +180,6 @@ export default function Home() {
       documentType,
       selectedSignatory,
       bodyText,
-      date,
       recipientName,
       recipientTitle,
       recipientAddress,
@@ -202,7 +197,6 @@ export default function Home() {
     documentType,
     selectedSignatory,
     bodyText,
-    date,
     recipientName,
     recipientTitle,
     recipientAddress,
@@ -221,7 +215,6 @@ export default function Home() {
       documentType,
       selectedSignatory,
       bodyText,
-      date,
       recipientName,
       recipientTitle,
       recipientAddress,
@@ -246,7 +239,6 @@ export default function Home() {
         setDocumentType(draft.documentType || "Letter of Recommendation");
         setSelectedSignatory(draft.selectedSignatory || signatories[0].id);
         setBodyText(draft.bodyText || "");
-        setDate(draft.date || format(new Date(), "yyyy-MM-dd"));
         setRecipientName(draft.recipientName || "");
         setRecipientTitle(draft.recipientTitle || "");
         setRecipientAddress(draft.recipientAddress || "");
@@ -270,7 +262,6 @@ export default function Home() {
     setDocumentType("Letter of Recommendation");
     setSelectedSignatory(signatories[0].id);
     setBodyText("");
-    setDate(format(new Date(), "yyyy-MM-dd"));
     setRecipientName("");
     setRecipientTitle("");
     setRecipientAddress("");
@@ -365,7 +356,6 @@ export default function Home() {
         signatoryCompany: signatory.company,
         signatoryPhone: signatory.phone,
         signatoryEmail: signatory.email,
-        date,
         recipientName,
         recipientTitle,
         recipientAddress,
@@ -417,7 +407,6 @@ export default function Home() {
         signatoryCompany: signatory.company,
         signatoryPhone: signatory.phone,
         signatoryEmail: signatory.email,
-        date,
         recipientName,
         recipientTitle,
         recipientAddress,

@@ -8,7 +8,6 @@ export interface PDFOptions {
   signatoryCompany?: string;
   signatoryPhone?: string;
   signatoryEmail?: string;
-  date?: string;
   recipientName?: string;
   recipientTitle?: string;
   recipientAddress?: string;
