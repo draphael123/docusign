@@ -5,6 +5,13 @@ export interface PDFOptions {
   bodyText: string;
   signatoryName: string;
   signatoryTitle: string;
+  date?: string;
+  recipientName?: string;
+  recipientTitle?: string;
+  recipientAddress?: string;
+  subject?: string;
+  fontSize?: number;
+  lineSpacing?: number;
 }
 
 export async function generatePDF(options: PDFOptions): Promise<Blob> {
@@ -85,9 +92,63 @@ export async function generatePDF(options: PDFOptions): Promise<Blob> {
     });
   }
 
-  // Add document type title (positioned after header image)
-  // Calculate yPosition based on header height
-  let yPosition = margin + 50; // Start below header with some spacing
+  // Calculate starting position after header
+  const headerHeight = 40; // Approximate header height
+  let yPosition = headerHeight + margin + 10;
+
+  // Add date (if provided)
+  if (options.date) {
+    const dateObj = new Date(options.date);
+    const formattedDate = dateObj.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(0, 0, 0);
+    doc.text(formattedDate, pageWidth - margin, yPosition, {
+      align: "right",
+    });
+    yPosition += 8;
+  }
+
+  // Add recipient information (if provided)
+  if (options.recipientName || options.recipientAddress) {
+    yPosition += 5;
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "normal");
+    
+    if (options.recipientName) {
+      const recipientLine = options.recipientTitle
+        ? `${options.recipientName}, ${options.recipientTitle}`
+        : options.recipientName;
+      doc.text(recipientLine, margin, yPosition);
+      yPosition += 6;
+    }
+    
+    if (options.recipientAddress) {
+      const addressLines = options.recipientAddress.split("\n");
+      for (const line of addressLines) {
+        if (line.trim()) {
+          doc.text(line.trim(), margin, yPosition);
+          yPosition += 6;
+        }
+      }
+    }
+    yPosition += 5;
+  }
+
+  // Add subject (if provided)
+  if (options.subject) {
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text(`Subject: ${options.subject}`, margin, yPosition);
+    yPosition += 8;
+  }
+
+  // Add document type title
+  yPosition += 5;
   doc.setFontSize(16);
   doc.setTextColor(0, 0, 0);
   doc.setFont("helvetica", "bold");
@@ -97,12 +158,15 @@ export async function generatePDF(options: PDFOptions): Promise<Blob> {
 
   // Add body text
   yPosition += 15;
-  doc.setFontSize(11);
+  const fontSize = options.fontSize || 11;
+  const lineSpacing = options.lineSpacing || 1.5;
+  doc.setFontSize(fontSize);
   doc.setFont("helvetica", "normal");
   const bodyLines = doc.splitTextToSize(options.bodyText, contentWidth);
   
   // Calculate where body text ends
   let currentY = yPosition;
+  const lineHeight = fontSize * lineSpacing * 0.35; // Convert to mm
   for (let i = 0; i < bodyLines.length; i++) {
     if (currentY > pageHeight - margin - 60) {
       // Add new page if needed
@@ -110,7 +174,7 @@ export async function generatePDF(options: PDFOptions): Promise<Blob> {
       currentY = margin + 20;
     }
     doc.text(bodyLines[i], margin, currentY);
-    currentY += 6; // Line height
+    currentY += lineHeight;
   }
 
   // Add spacing before signature area

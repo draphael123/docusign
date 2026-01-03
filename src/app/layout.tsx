@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "DocuSign Template Automation",
-  description: "Automate DocuSign template generation",
+  title: "Document Template Generator",
+  description: "Generate professional PDF document templates with AI assistance",
 };
 
 export default function RootLayout({
