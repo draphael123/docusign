@@ -178,17 +178,25 @@ export async function generatePDF(options: PDFOptions): Promise<Blob> {
   }
 
   // Add spacing before signature area
-  // Ensure we have enough space at the bottom (at least 40mm for signature + signatory info)
-  const minFooterSpace = 40;
-  let signatureY = currentY + 20;
+  // Ensure we have enough space at the bottom (at least 50mm for signature + signatory info + padding)
+  const minFooterSpace = 50;
+  const spacingBeforeSignature = 20;
+  let signatureY = currentY + spacingBeforeSignature;
   
   // Check if we need a new page for the signature area
-  if (signatureY > pageHeight - margin - minFooterSpace) {
+  // We need: signature line (1mm) + spacing (8mm) + name (5mm) + spacing (7mm) + title (5mm) + bottom margin (20mm) = 46mm minimum
+  const requiredFooterHeight = 46;
+  
+  if (signatureY + requiredFooterHeight > pageHeight - margin) {
+    // Add new page if signature area won't fit
     doc.addPage();
-    signatureY = pageHeight - margin - minFooterSpace;
+    signatureY = pageHeight - margin - requiredFooterHeight;
   } else {
-    // Position signature area with proper spacing from bottom
-    signatureY = Math.max(signatureY, pageHeight - margin - minFooterSpace);
+    // Ensure minimum spacing from bottom
+    const maxSignatureY = pageHeight - margin - requiredFooterHeight;
+    if (signatureY > maxSignatureY) {
+      signatureY = maxSignatureY;
+    }
   }
   
   // Add signature line (dotted line for DocuSign)
@@ -203,17 +211,23 @@ export async function generatePDF(options: PDFOptions): Promise<Blob> {
   }
 
   // Add signatory information below signature line
-  // Ensure it fits on the page
+  // Calculate positions ensuring they fit on the page
   const signatoryNameY = signatureY + 8;
-  const signatoryTitleY = signatureY + 15;
+  const signatoryTitleY = signatureY + 18; // Increased spacing between name and title
   
-  // Check if signatory info fits on current page, if not add new page
-  if (signatoryTitleY > pageHeight - margin) {
+  // Double-check that everything fits
+  if (signatoryTitleY + 5 > pageHeight - margin) {
+    // If still doesn't fit, add new page
     doc.addPage();
-    const newSignatureY = pageHeight - margin - minFooterSpace;
-    doc.line(signatureLineX, newSignatureY, signatureLineX + signatureLineWidth, newSignatureY);
+    const newSignatureY = pageHeight - margin - requiredFooterHeight;
+    // Redraw signature line
+    for (let i = 0; i < signatureLineWidth; i += 2) {
+      doc.line(signatureLineX + i, newSignatureY, signatureLineX + i + 1, newSignatureY);
+    }
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "normal");
     doc.text(options.signatoryName, margin, newSignatureY + 8);
-    doc.text(options.signatoryTitle, margin, newSignatureY + 15);
+    doc.text(options.signatoryTitle, margin, newSignatureY + 18);
   } else {
     doc.setFontSize(11);
     doc.setFont("helvetica", "normal");
