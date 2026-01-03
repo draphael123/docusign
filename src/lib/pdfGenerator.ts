@@ -59,21 +59,25 @@ export async function generatePDF(options: PDFOptions): Promise<Blob> {
       let headerWidth = img.width;
       let headerHeight = img.height;
       
-      // CROP: Only use the top 20% of the image (header only, exclude footer)
-      // The original image contains both header AND footer, we only want the top part
-      const cropPercentage = 0.20; // Only use top 20% of image
-      
       // Scale to fill entire page width while maintaining aspect ratio
       const scale = fullPageWidth / headerWidth;
       
       headerWidth = headerWidth * scale;
-      headerHeight = (headerHeight * cropPercentage) * scale; // Use only top portion
+      headerHeight = headerHeight * scale;
       
       // Position at top-left corner (no margin)
       const imageX = 0;
       const imageY = 0;
       
+      // Add full template image
       doc.addImage(imageUrl, imageType, imageX, imageY, headerWidth, headerHeight);
+      
+      // Cover the footer area with white rectangle to hide footer text
+      // Footer is in bottom ~15% of the template image
+      const footerCoverY = pageHeight - 35; // Start covering 35mm from bottom
+      doc.setFillColor(255, 255, 255); // White
+      doc.rect(0, footerCoverY, pageWidth, 35, "F"); // Fill rectangle to cover footer
+      
       URL.revokeObjectURL(imageUrl);
     } else {
       // Fallback: create a placeholder rectangle if image not found (full page width)
