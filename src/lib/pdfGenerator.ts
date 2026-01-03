@@ -226,6 +226,56 @@ export async function generatePDF(options: PDFOptions): Promise<Blob> {
     doc.setTextColor(0, 0, 0);
   }
 
+  // Add footer to all pages
+  const totalPages = doc.internal.pages.length - 1; // jsPDF uses 1-based indexing
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    
+    // Draw horizontal line above footer
+    const footerLineY = pageHeight - 30;
+    doc.setDrawColor(0, 51, 102); // Dark blue color
+    doc.setLineWidth(0.5);
+    doc.line(margin, footerLineY, pageWidth - margin, footerLineY);
+    
+    // Footer content positioning
+    const footerStartY = pageHeight - 22;
+    const footerWidth = pageWidth - 2 * margin;
+    const columnWidth = footerWidth / 3;
+    const column1X = margin;
+    const column2X = margin + columnWidth;
+    const column3X = margin + (columnWidth * 2);
+    
+    doc.setTextColor(0, 0, 0);
+    
+    // Column 1: Call
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.text("Call", column1X, footerStartY);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text("(213) 237-1454", column1X, footerStartY + 5);
+    
+    // Column 2: Message
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.text("Message", column2X, footerStartY);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text("support@fountain.net", column2X, footerStartY + 5);
+    
+    // Column 3: Office Address
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.text("Office Address", column3X, footerStartY);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text("2064 Park St, Jacksonville", column3X, footerStartY + 5);
+    doc.text("FL 32204", column3X, footerStartY + 9);
+  }
+
+  // Return to last page
+  doc.setPage(totalPages);
+
   // Generate PDF blob
   const pdfBlob = doc.output("blob");
   return pdfBlob;
