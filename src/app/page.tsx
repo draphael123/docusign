@@ -470,7 +470,7 @@ export default function Home() {
                       id="recipientName"
                       value={recipientName}
                       onChange={(e) => setRecipientName(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-4 py-3 border-2 border-green-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white font-medium text-gray-800 hover:border-green-300"
                       placeholder="Recipient name"
                     />
                   </div>
@@ -486,7 +486,7 @@ export default function Home() {
                       id="recipientTitle"
                       value={recipientTitle}
                       onChange={(e) => setRecipientTitle(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-4 py-3 border-2 border-green-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white font-medium text-gray-800 hover:border-green-300"
                       placeholder="Recipient title"
                     />
                   </div>
@@ -502,7 +502,7 @@ export default function Home() {
                       value={recipientAddress}
                       onChange={(e) => setRecipientAddress(e.target.value)}
                       rows={2}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-4 py-3 border-2 border-green-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white font-medium text-gray-800 hover:border-green-300 resize-y"
                       placeholder="Recipient address"
                     />
                   </div>
@@ -518,7 +518,7 @@ export default function Home() {
                       id="subject"
                       value={subject}
                       onChange={(e) => setSubject(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-4 py-3 border-2 border-green-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white font-medium text-gray-800 hover:border-green-300"
                       placeholder="Document subject"
                     />
                   </div>
@@ -526,15 +526,16 @@ export default function Home() {
               </div>
 
               {/* Signatory Radio Selection */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+              <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-6 rounded-xl border border-indigo-100">
+                <label className="block text-sm font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                  <span className="w-2 h-2 bg-indigo-500 rounded-full"></span>
                   Signatory
                 </label>
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {signatories.map((signatory) => (
                     <label
                       key={signatory.id}
-                      className="flex items-center p-3 border border-gray-300 rounded-md hover:bg-gray-50 cursor-pointer"
+                      className="flex items-center p-4 border-2 border-indigo-200 rounded-xl hover:bg-white hover:border-indigo-400 hover:shadow-md cursor-pointer transition-all duration-200 bg-white/50"
                     >
                       <input
                         type="radio"
@@ -661,8 +662,8 @@ export default function Home() {
                         value={aiPrompt}
                         onChange={(e) => setAiPrompt(e.target.value)}
                         rows={3}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="e.g., 'Write a letter of recommendation for John Doe, a software engineer with 5 years of experience, highlighting his technical skills and leadership abilities...'"
+                      className="w-full px-4 py-3 border-2 border-purple-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white font-medium text-gray-800 hover:border-purple-300 resize-y"
+                      placeholder="e.g., 'Write a letter of recommendation for John Doe, a software engineer with 5 years of experience, highlighting his technical skills and leadership abilities...'"
                       />
                     </div>
                     <div className="flex flex-wrap gap-2">
