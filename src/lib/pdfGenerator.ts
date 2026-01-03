@@ -293,15 +293,15 @@ export async function generatePDF(options: PDFOptions): Promise<Blob> {
   const footerAddress = options.footerAddress || "2064 Park St, Jacksonville FL 32204";
 
   // Function to add footer to current page
-  const addFooterToPage = (pageNum: number) => {
-    // Draw separator line above footer
-    const separatorY = pageHeight - 25; // Position separator line
+  const addFooterToPage = () => {
+    // Draw separator line above footer (positioned near bottom with space for content)
+    const separatorY = pageHeight - 20; // Position separator line 20mm from bottom
     doc.setDrawColor(0, 0, 0);
     doc.setLineWidth(0.3);
     doc.line(margin, separatorY, pageWidth - margin, separatorY);
 
     // Add footer contact information
-    const footerY = separatorY + 5;
+    const footerY = separatorY + 4;
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(0, 0, 0);
@@ -333,8 +333,10 @@ export async function generatePDF(options: PDFOptions): Promise<Blob> {
     const addressLines = footerAddress.split(", ");
     let addressY = footerY + 4;
     for (const line of addressLines) {
-      doc.text(line.trim(), column3X, addressY);
-      addressY += 4;
+      if (line.trim()) {
+        doc.text(line.trim(), column3X, addressY);
+        addressY += 4;
+      }
     }
   };
 
@@ -342,7 +344,7 @@ export async function generatePDF(options: PDFOptions): Promise<Blob> {
   const totalPages = doc.internal.pages.length - 1; // jsPDF uses 1-based indexing
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
-    addFooterToPage(i);
+    addFooterToPage();
   }
 
   // Return to the last page
