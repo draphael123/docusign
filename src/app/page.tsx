@@ -63,9 +63,6 @@ export default function Home() {
   const [customSignatoryEmail, setCustomSignatoryEmail] = useState<string>("");
   const [bodyText, setBodyText] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
-  const [aiPrompt, setAiPrompt] = useState<string>("");
-  const [isGeneratingText, setIsGeneratingText] = useState<boolean>(false);
-  const [showAiOption, setShowAiOption] = useState<boolean>(false);
   const [recipientName, setRecipientName] = useState<string>("");
   const [recipientTitle, setRecipientTitle] = useState<string>("");
   const [recipientAddress, setRecipientAddress] = useState<string>("");
@@ -275,55 +272,6 @@ export default function Home() {
     setFontSize(11);
     setLineSpacing(1.5);
     toast.success("Draft cleared!");
-  };
-
-  const handleGenerateText = async (action: "generate" | "regenerate" | "improve" = "generate") => {
-    if (!aiPrompt.trim() && action !== "regenerate") {
-      toast.error("Please enter a prompt for text generation");
-      return;
-    }
-
-    setIsGeneratingText(true);
-    try {
-      const promptText = action === "regenerate" 
-        ? "Regenerate the following text with similar content but different wording: " + bodyText
-        : action === "improve"
-        ? "Improve and enhance the following text while maintaining its meaning: " + bodyText
-        : aiPrompt;
-
-      const response = await fetch("/api/generate-text", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          prompt: promptText,
-          documentType: documentType,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to generate text");
-      }
-
-      if (data.success && data.text) {
-        setBodyText(data.text);
-        if (action === "generate") {
-          setShowAiOption(false);
-          setAiPrompt("");
-        }
-        toast.success("Text generated successfully!");
-      } else {
-        throw new Error("No text generated");
-      }
-    } catch (error: any) {
-      console.error("Error generating text:", error);
-      toast.error(error.message || "Error generating text. Please try again.");
-    } finally {
-      setIsGeneratingText(false);
-    }
   };
 
   const handlePreviewPDF = async () => {
@@ -797,82 +745,20 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* AI Text Generation Option */}
+              {/* Document Body */}
               <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-6 rounded-xl border border-amber-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.01]">
-                <div className="flex items-center justify-between mb-4">
-                  <label className="block text-sm font-semibold text-gray-800 flex items-center gap-2">
-                    <span className="text-lg">📝</span>
-                    Document Body
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setShowAiOption(!showAiOption)}
-                    className="text-sm bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-2 rounded-lg hover:from-purple-600 hover:to-pink-600 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 hover:scale-105 font-medium transition-all relative overflow-hidden group"
-                  >
-                    <span className="relative z-10">{showAiOption ? "Hide AI Generator" : "✨ Use AI to Generate Text"}</span>
-                    <span className="absolute inset-0 bg-gradient-to-r from-pink-600 to-purple-600 opacity-0 group-hover:opacity-100 transition-opacity"></span>
-                  </button>
-                </div>
-
-                {showAiOption ? (
-                  <div className="space-y-3 mb-4 p-5 bg-gradient-to-r from-purple-100 to-pink-100 rounded-xl border-2 border-purple-200 shadow-inner">
-                    <div>
-                      <label
-                        htmlFor="aiPrompt"
-                        className="block text-xs font-medium text-gray-600 mb-1"
-                      >
-                        Describe what you want in the document:
-                      </label>
-                      <textarea
-                        id="aiPrompt"
-                        value={aiPrompt}
-                        onChange={(e) => setAiPrompt(e.target.value)}
-                        rows={3}
-                      className="w-full px-4 py-3 border-2 border-purple-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white font-medium text-gray-800 hover:border-purple-300 resize-y"
-                      placeholder="e.g., 'Write a letter of recommendation for John Doe, a software engineer with 5 years of experience, highlighting his technical skills and leadership abilities...'"
-                      />
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={() => handleGenerateText("generate")}
-                        disabled={isGeneratingText || !aiPrompt.trim()}
-                        className="flex-1 min-w-[120px] bg-gradient-to-r from-green-500 to-emerald-500 text-white py-2 px-4 rounded-lg font-medium hover:from-green-600 hover:to-emerald-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all"
-                      >
-                        {isGeneratingText ? "Generating..." : "✨ Generate Text"}
-                      </button>
-                      {bodyText && (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => handleGenerateText("regenerate")}
-                            disabled={isGeneratingText}
-                            className="flex-1 min-w-[120px] bg-gradient-to-r from-blue-500 to-cyan-500 text-white py-2 px-4 rounded-lg font-medium hover:from-blue-600 hover:to-cyan-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all"
-                          >
-                            {isGeneratingText ? "Regenerating..." : "🔄 Regenerate"}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleGenerateText("improve")}
-                            disabled={isGeneratingText}
-                            className="flex-1 min-w-[120px] bg-gradient-to-r from-purple-500 to-pink-500 text-white py-2 px-4 rounded-lg font-medium hover:from-purple-600 hover:to-pink-600 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all"
-                          >
-                            {isGeneratingText ? "Improving..." : "✨ Improve Text"}
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                ) : null}
-
-              <textarea
-                id="bodyText"
-                value={bodyText}
-                onChange={(e) => setBodyText(e.target.value)}
-                rows={10}
-                className="w-full px-4 py-3 border-2 border-amber-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white font-medium text-gray-800 hover:border-amber-300 resize-y"
-                placeholder="Enter the document body text here, or use AI to generate it..."
-              />
+                <label className="block text-sm font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                  <span className="text-lg">📝</span>
+                  Document Body
+                </label>
+                <textarea
+                  id="bodyText"
+                  value={bodyText}
+                  onChange={(e) => setBodyText(e.target.value)}
+                  rows={10}
+                  className="w-full px-4 py-3 border-2 border-amber-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white font-medium text-gray-800 hover:border-amber-300 resize-y"
+                  placeholder="Enter the document body text here..."
+                />
                 <div className="mt-2 flex justify-between text-xs font-semibold text-gray-600 bg-white/50 px-3 py-2 rounded-lg">
                   <span className="flex items-center gap-1">📝 {wordCount} words</span>
                   <span className="flex items-center gap-1">🔤 {characterCount} characters</span>
