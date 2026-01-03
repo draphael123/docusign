@@ -13,6 +13,7 @@ import TemplateGallery from "@/components/TemplateGallery";
 import StatisticsPanel from "@/components/StatisticsPanel";
 import DocumentHistory from "@/components/DocumentHistory";
 import ProgressIndicator from "@/components/ProgressIndicator";
+import UserGuide from "@/components/UserGuide";
 
 const documentTypes = [
   "Letter of Recommendation",
@@ -74,6 +75,7 @@ export default function Home() {
   const [showTemplateGallery, setShowTemplateGallery] = useState<boolean>(false);
   const [showStatistics, setShowStatistics] = useState<boolean>(false);
   const [showHistory, setShowHistory] = useState<boolean>(false);
+  const [showGuide, setShowGuide] = useState<boolean>(false);
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [showWizard, setShowWizard] = useState<boolean>(false);
 
@@ -476,6 +478,12 @@ export default function Home() {
                   <span className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 opacity-0 group-hover:opacity-100 transition-opacity"></span>
                 </Link>
                 <button
+                  onClick={() => setShowGuide(true)}
+                  className="px-4 py-2 text-sm bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-lg hover:from-yellow-600 hover:to-orange-600 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 font-medium"
+                >
+                  📖 Guide
+                </button>
+                <button
                   onClick={handleSaveDraft}
                   className="px-4 py-2 text-sm bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg hover:from-purple-600 hover:to-blue-600 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 font-medium"
                   title="Ctrl+S"
@@ -868,6 +876,11 @@ export default function Home() {
         onClose={() => setShowHistory(false)}
         onLoadDocument={handleLoadFromHistory}
       />
+
+      {/* User Guide */}
+      {showGuide && (
+        <UserGuide onClose={() => setShowGuide(false)} />
+      )}
     </>
   );
 }
