@@ -135,3 +135,78 @@ body {
   background-size: 1000px 100%;
   animation: shimmer 3s infinite;
 }
+
+/* Confetti animations */
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(-10vh) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+@keyframes confetti-spin {
+  0% {
+    transform: rotateX(0deg) rotateY(0deg);
+  }
+  100% {
+    transform: rotateX(360deg) rotateY(360deg);
+  }
+}
+
+.animate-confetti-fall {
+  animation: confetti-fall 3s ease-in forwards;
+}
+
+.animate-confetti-spin {
+  animation: confetti-spin 1s linear infinite;
+}
+
+/* Success celebration animation */
+@keyframes celebration-bounce {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.animate-celebration {
+  animation: celebration-bounce 0.5s ease-in-out;
+}
+
+/* Sparkle animation */
+@keyframes sparkle {
+  0%, 100% {
+    opacity: 0;
+    transform: scale(0);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-sparkle {
+  animation: sparkle 1s ease-in-out infinite;
+}
+
+/* Achievement unlock animation */
+@keyframes slide-in-right {
+  0% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in {
+  animation: slide-in-right 0.5s ease-out forwards;
+}

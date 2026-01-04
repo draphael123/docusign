@@ -16,6 +16,8 @@ import ProgressIndicator from "@/components/ProgressIndicator";
 import UserGuide from "@/components/UserGuide";
 import Tooltip from "@/components/Tooltip";
 import FavoritesPanel from "@/components/FavoritesPanel";
+import Confetti from "@/components/Confetti";
+import PrivacySettings from "@/components/PrivacySettings";
 import { 
   validateEmail, 
   validatePhone, 
@@ -93,6 +95,7 @@ export default function Home() {
   const [showHistory, setShowHistory] = useState<boolean>(false);
   const [showGuide, setShowGuide] = useState<boolean>(false);
   const [showFavorites, setShowFavorites] = useState<boolean>(false);
+  const [showPrivacySettings, setShowPrivacySettings] = useState<boolean>(false);
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [showWizard, setShowWizard] = useState<boolean>(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
@@ -103,6 +106,9 @@ export default function Home() {
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [validationWarnings, setValidationWarnings] = useState<Record<string, string>>({});
   const [showValidation, setShowValidation] = useState<boolean>(false);
+
+  // Celebration states
+  const [showConfetti, setShowConfetti] = useState<boolean>(false);
 
   // Get theme after mount to avoid SSR issues
   const [theme, setTheme] = useState<"light" | "dark">("light");
@@ -500,16 +506,20 @@ export default function Home() {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      // Save to history and update statistics
-      saveToHistory({
-        documentType,
-        signatoryName: signatory.name,
-      });
-      const { newAchievements } = updateStats(documentType, signatory.name);
-      if (newAchievements.length > 0) {
-        newAchievements.forEach((achievement) => {
-          toast.success(`🏆 Achievement Unlocked: ${achievement}!`, { duration: 5000 });
+      // Save to history and update statistics (unless in private mode)
+      const isPrivateMode = localStorage.getItem("privateMode") === "true";
+      if (!isPrivateMode) {
+        saveToHistory({
+          documentType,
+          signatoryName: signatory.name,
         });
+        const { newAchievements } = updateStats(documentType, signatory.name);
+        if (newAchievements.length > 0) {
+          setShowConfetti(true);
+          newAchievements.forEach((achievement) => {
+            toast.success(`🏆 Achievement Unlocked: ${achievement}!`, { duration: 5000 });
+          });
+        }
       }
 
       // Save last used settings
@@ -758,6 +768,13 @@ export default function Home() {
                     className="px-4 py-2 text-sm bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-lg hover:from-yellow-600 hover:to-orange-600 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 font-medium"
                   >
                     📖 Guide
+                  </button>
+                  <button
+                    onClick={() => setShowPrivacySettings(true)}
+                    className="px-4 py-2 text-sm bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-lg hover:from-red-600 hover:to-pink-600 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 font-medium"
+                    title="Privacy & Data Management"
+                  >
+                    🔒 Privacy
                   </button>
                   <button
                     onClick={handleSaveDraft}
@@ -1250,6 +1267,18 @@ export default function Home() {
         isOpen={showFavorites}
         onClose={() => setShowFavorites(false)}
         onLoad={handleLoadFavorite}
+      />
+
+      {/* Confetti Celebration */}
+      <Confetti 
+        trigger={showConfetti}
+        onComplete={() => setShowConfetti(false)}
+      />
+
+      {/* Privacy Settings */}
+      <PrivacySettings
+        isOpen={showPrivacySettings}
+        onClose={() => setShowPrivacySettings(false)}
       />
     </>
   );
