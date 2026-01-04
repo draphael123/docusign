@@ -14,6 +14,22 @@ import StatisticsPanel from "@/components/StatisticsPanel";
 import DocumentHistory from "@/components/DocumentHistory";
 import ProgressIndicator from "@/components/ProgressIndicator";
 import UserGuide from "@/components/UserGuide";
+import Tooltip from "@/components/Tooltip";
+import FavoritesPanel from "@/components/FavoritesPanel";
+import { 
+  validateEmail, 
+  validatePhone, 
+  validateBodyText, 
+  validateName,
+  getCharacterCount,
+  ValidationResult 
+} from "@/utils/validation";
+import {
+  saveLastUsedSettings,
+  getLastUsedSettings,
+  saveFavorite,
+  FavoriteSettings,
+} from "@/utils/favorites";
 
 const documentTypes = [
   "Letter of Recommendation",
@@ -76,8 +92,17 @@ export default function Home() {
   const [showStatistics, setShowStatistics] = useState<boolean>(false);
   const [showHistory, setShowHistory] = useState<boolean>(false);
   const [showGuide, setShowGuide] = useState<boolean>(false);
+  const [showFavorites, setShowFavorites] = useState<boolean>(false);
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [showWizard, setShowWizard] = useState<boolean>(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState<boolean>(true);
+
+  // Validation states
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [validationWarnings, setValidationWarnings] = useState<Record<string, string>>({});
+  const [showValidation, setShowValidation] = useState<boolean>(false);
 
   // Get theme after mount to avoid SSR issues
   const [theme, setTheme] = useState<"light" | "dark">("light");
@@ -93,7 +118,74 @@ export default function Home() {
         const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
         setTheme(prefersDark ? "dark" : "light");
       }
+      
+      // Load last saved timestamp
+      const lastSavedStr = localStorage.getItem("lastSaved");
+      if (lastSavedStr) {
+        setLastSaved(new Date(lastSavedStr));
+      }
     }
+  }, []);
+
+  // Track unsaved changes
+  useEffect(() => {
+    if (mounted) {
+      setHasUnsavedChanges(true);
+    }
+  }, [
+    documentType,
+    selectedSignatory,
+    bodyText,
+    recipientName,
+    recipientTitle,
+    recipientAddress,
+    subject,
+    customSignatoryName,
+    customSignatoryTitle,
+    customSignatoryCompany,
+    customSignatoryPhone,
+    customSignatoryEmail,
+    fontSize,
+    lineSpacing,
+    mounted,
+  ]);
+
+  // Auto-save every 30 seconds
+  useEffect(() => {
+    if (!mounted || !autoSaveEnabled) return;
+
+    const autoSaveInterval = setInterval(() => {
+      if (hasUnsavedChanges && bodyText.trim()) {
+        handleAutoSave();
+      }
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(autoSaveInterval);
+  }, [hasUnsavedChanges, bodyText, autoSaveEnabled, mounted]);
+
+  // Warn about unsaved changes before leaving
+  useEffect(() => {
+    if (!mounted) return;
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges && bodyText.trim()) {
+        e.preventDefault();
+        e.returnValue = "";
+        return "";
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [hasUnsavedChanges, bodyText, mounted]);
+
+  // Update "last saved" display every minute
+  const [, setRefreshTimestamp] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setRefreshTimestamp(Date.now());
+    }, 60000); // Update every minute
+    return () => clearInterval(timer);
   }, []);
 
   const toggleTheme = () => {
@@ -209,6 +301,30 @@ export default function Home() {
     lineSpacing,
   ]);
 
+  const handleAutoSave = () => {
+    const draft: DraftData = {
+      documentType,
+      selectedSignatory,
+      bodyText,
+      recipientName,
+      recipientTitle,
+      recipientAddress,
+      subject,
+      customSignatoryName,
+      customSignatoryTitle,
+      customSignatoryCompany,
+      customSignatoryPhone,
+      customSignatoryEmail,
+      fontSize,
+      lineSpacing,
+    };
+    localStorage.setItem("documentDraft", JSON.stringify(draft));
+    const now = new Date();
+    localStorage.setItem("lastSaved", now.toISOString());
+    setLastSaved(now);
+    setHasUnsavedChanges(false);
+  };
+
   const handleSaveDraft = () => {
     const draft: DraftData = {
       documentType,
@@ -227,6 +343,10 @@ export default function Home() {
       lineSpacing,
     };
     localStorage.setItem("documentDraft", JSON.stringify(draft));
+    const now = new Date();
+    localStorage.setItem("lastSaved", now.toISOString());
+    setLastSaved(now);
+    setHasUnsavedChanges(false);
     toast.success("Draft saved successfully!");
   };
 
@@ -244,9 +364,13 @@ export default function Home() {
         setSubject(draft.subject || "");
         setCustomSignatoryName(draft.customSignatoryName || "");
         setCustomSignatoryTitle(draft.customSignatoryTitle || "");
+        setCustomSignatoryCompany(draft.customSignatoryCompany || "");
+        setCustomSignatoryPhone(draft.customSignatoryPhone || "");
+        setCustomSignatoryEmail(draft.customSignatoryEmail || "");
         setUseCustomSignatory(!!draft.customSignatoryName);
         setFontSize(draft.fontSize || 11);
         setLineSpacing(draft.lineSpacing || 1.5);
+        setHasUnsavedChanges(false);
         toast.success("Draft loaded successfully!");
       } catch (error) {
         toast.error("Error loading draft");
@@ -388,6 +512,20 @@ export default function Home() {
         });
       }
 
+      // Save last used settings
+      saveLastUsedSettings({
+        documentType,
+        selectedSignatory,
+        useCustomSignatory,
+        customSignatoryName,
+        customSignatoryTitle,
+        customSignatoryCompany,
+        customSignatoryPhone,
+        customSignatoryEmail,
+        fontSize,
+        lineSpacing,
+      });
+
       toast.success("PDF generated and downloaded successfully!");
     } catch (error: any) {
       console.error("Error generating PDF:", error);
@@ -416,6 +554,117 @@ export default function Home() {
     toast.success("Document loaded from history!");
   };
 
+  // Real-time validation
+  const validateField = (fieldName: string, value: string): ValidationResult => {
+    switch (fieldName) {
+      case "bodyText":
+        return validateBodyText(value);
+      case "customSignatoryEmail":
+        return validateEmail(value);
+      case "customSignatoryPhone":
+        return validatePhone(value);
+      case "customSignatoryName":
+        return validateName(value);
+      case "recipientName":
+        return value ? validateName(value) : { isValid: true };
+      default:
+        return { isValid: true };
+    }
+  };
+
+  const handleFieldChange = (fieldName: string, value: string, setter: (value: string) => void) => {
+    setter(value);
+    if (showValidation) {
+      const result = validateField(fieldName, value);
+      setValidationErrors(prev => {
+        const newErrors = { ...prev };
+        if (result.error) {
+          newErrors[fieldName] = result.error;
+        } else {
+          delete newErrors[fieldName];
+        }
+        return newErrors;
+      });
+      setValidationWarnings(prev => {
+        const newWarnings = { ...prev };
+        if (result.warning) {
+          newWarnings[fieldName] = result.warning;
+        } else {
+          delete newWarnings[fieldName];
+        }
+        return newWarnings;
+      });
+    }
+  };
+
+  // Quick Actions
+  const handleUseLastSettings = () => {
+    const lastUsed = getLastUsedSettings();
+    if (lastUsed) {
+      setDocumentType(lastUsed.documentType);
+      setSelectedSignatory(lastUsed.selectedSignatory);
+      setUseCustomSignatory(lastUsed.useCustomSignatory);
+      setCustomSignatoryName(lastUsed.customSignatoryName || "");
+      setCustomSignatoryTitle(lastUsed.customSignatoryTitle || "");
+      setCustomSignatoryCompany(lastUsed.customSignatoryCompany || "");
+      setCustomSignatoryPhone(lastUsed.customSignatoryPhone || "");
+      setCustomSignatoryEmail(lastUsed.customSignatoryEmail || "");
+      setFontSize(lastUsed.fontSize);
+      setLineSpacing(lastUsed.lineSpacing);
+      toast.success("Last used settings loaded!");
+    } else {
+      toast.error("No previous settings found");
+    }
+  };
+
+  const handleSaveAsFavorite = () => {
+    if (!bodyText.trim()) {
+      toast.error("Please enter document content before saving as favorite");
+      return;
+    }
+    
+    const favoriteName = prompt("Enter a name for this favorite:");
+    if (!favoriteName) return;
+    
+    saveFavorite({
+      name: favoriteName,
+      documentType,
+      selectedSignatory,
+      useCustomSignatory,
+      customSignatoryName,
+      customSignatoryTitle,
+      customSignatoryCompany,
+      customSignatoryPhone,
+      customSignatoryEmail,
+      recipientName,
+      recipientTitle,
+      recipientAddress,
+      subject,
+      fontSize,
+      lineSpacing,
+    });
+    
+    toast.success(`Saved as favorite: "${favoriteName}"! ⭐`);
+  };
+
+  const handleLoadFavorite = (favorite: FavoriteSettings) => {
+    setDocumentType(favorite.documentType);
+    setSelectedSignatory(favorite.selectedSignatory);
+    setUseCustomSignatory(favorite.useCustomSignatory);
+    setCustomSignatoryName(favorite.customSignatoryName || "");
+    setCustomSignatoryTitle(favorite.customSignatoryTitle || "");
+    setCustomSignatoryCompany(favorite.customSignatoryCompany || "");
+    setCustomSignatoryPhone(favorite.customSignatoryPhone || "");
+    setCustomSignatoryEmail(favorite.customSignatoryEmail || "");
+    setRecipientName(favorite.recipientName || "");
+    setRecipientTitle(favorite.recipientTitle || "");
+    setRecipientAddress(favorite.recipientAddress || "");
+    setSubject(favorite.subject || "");
+    setFontSize(favorite.fontSize);
+    setLineSpacing(favorite.lineSpacing);
+    toast.success(`Favorite "${favorite.name}" loaded!`);
+  };
+
   return (
     <>
       <Toaster position="top-right" />
@@ -442,66 +691,127 @@ export default function Home() {
                   Generate professional PDF templates ready to upload to DocuSign
                 </p>
               </div>
-              <div className="mt-4 sm:mt-0 flex flex-wrap gap-2">
+              <div className="mt-4 sm:mt-0">
+                {/* Save Status Indicator */}
                 {mounted && (
-                  <button
-                    onClick={toggleTheme}
-                    className="px-4 py-2 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 font-medium"
-                    title="Toggle dark mode"
-                  >
-                    {theme === "dark" ? "☀️" : "🌙"}
-                  </button>
+                  <div className="text-xs text-gray-600 dark:text-gray-400 mb-2 flex items-center gap-2 justify-end">
+                    {hasUnsavedChanges ? (
+                      <span className="flex items-center gap-1 text-orange-600 dark:text-orange-400 font-semibold">
+                        <span className="inline-block w-2 h-2 bg-orange-500 rounded-full animate-pulse"></span>
+                        Unsaved changes
+                      </span>
+                    ) : lastSaved ? (
+                      <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
+                        <span className="inline-block w-2 h-2 bg-green-500 rounded-full"></span>
+                        Saved {(() => {
+                          const seconds = Math.floor((new Date().getTime() - lastSaved.getTime()) / 1000);
+                          if (seconds < 60) return "just now";
+                          const minutes = Math.floor(seconds / 60);
+                          if (minutes < 60) return `${minutes}m ago`;
+                          const hours = Math.floor(minutes / 60);
+                          return `${hours}h ago`;
+                        })()}
+                      </span>
+                    ) : null}
+                    {autoSaveEnabled && (
+                      <span className="text-gray-500 dark:text-gray-500">• Auto-save on</span>
+                    )}
+                  </div>
                 )}
-                <button
-                  onClick={() => setShowTemplateGallery(true)}
-                  className="px-4 py-2 text-sm bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:from-green-600 hover:to-emerald-600 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 font-medium"
-                >
-                  📚 Templates
-                </button>
-                <button
-                  onClick={() => setShowStatistics(true)}
-                  className="px-4 py-2 text-sm bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg hover:from-blue-600 hover:to-cyan-600 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 font-medium"
-                >
-                  📊 Stats
-                </button>
-                <button
-                  onClick={() => setShowHistory(true)}
-                  className="px-4 py-2 text-sm bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 font-medium"
-                >
-                  📜 History
-                </button>
-                <Link
-                  href="/suggestions"
-                  className="inline-block px-4 py-2 text-sm bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-lg hover:from-indigo-600 hover:to-purple-600 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 hover:scale-105 font-medium transition-all relative overflow-hidden group"
-                >
-                  <span className="relative z-10">💡 Feedback</span>
-                  <span className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 opacity-0 group-hover:opacity-100 transition-opacity"></span>
-                </Link>
-                <button
-                  onClick={() => setShowGuide(true)}
-                  className="px-4 py-2 text-sm bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-lg hover:from-yellow-600 hover:to-orange-600 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 font-medium"
-                >
-                  📖 Guide
-                </button>
-                <button
-                  onClick={handleSaveDraft}
-                  className="px-4 py-2 text-sm bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg hover:from-purple-600 hover:to-blue-600 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 font-medium"
-                  title="Ctrl+S"
-                >
-                  💾 Save
-                </button>
-                <button
-                  onClick={handleLoadDraft}
-                  className="px-4 py-2 text-sm bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg hover:from-blue-600 hover:to-cyan-600 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 font-medium"
-                >
-                  📂 Load
-                </button>
-                <button
-                  onClick={handleClearDraft}
-                  className="px-4 py-2 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 font-medium"
-                >
-                  🗑️ Clear
-                </button>
+                <div className="flex flex-wrap gap-2">
+                  {mounted && (
+                    <button
+                      onClick={toggleTheme}
+                      className="px-4 py-2 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 font-medium"
+                      title="Toggle dark mode"
+                    >
+                      {theme === "dark" ? "☀️" : "🌙"}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setShowTemplateGallery(true)}
+                    className="px-4 py-2 text-sm bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:from-green-600 hover:to-emerald-600 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 font-medium"
+                  >
+                    📚 Templates
+                  </button>
+                  <button
+                    onClick={() => setShowStatistics(true)}
+                    className="px-4 py-2 text-sm bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg hover:from-blue-600 hover:to-cyan-600 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 font-medium"
+                  >
+                    📊 Stats
+                  </button>
+                  <button
+                    onClick={() => setShowHistory(true)}
+                    className="px-4 py-2 text-sm bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 font-medium"
+                  >
+                    📜 History
+                  </button>
+                  <Link
+                    href="/suggestions"
+                    className="inline-block px-4 py-2 text-sm bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-lg hover:from-indigo-600 hover:to-purple-600 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 hover:scale-105 font-medium transition-all relative overflow-hidden group"
+                  >
+                    <span className="relative z-10">💡 Feedback</span>
+                    <span className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 opacity-0 group-hover:opacity-100 transition-opacity"></span>
+                  </Link>
+                  <button
+                    onClick={() => setShowGuide(true)}
+                    className="px-4 py-2 text-sm bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-lg hover:from-yellow-600 hover:to-orange-600 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 font-medium"
+                  >
+                    📖 Guide
+                  </button>
+                  <button
+                    onClick={handleSaveDraft}
+                    className="px-4 py-2 text-sm bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg hover:from-purple-600 hover:to-blue-600 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 font-medium"
+                    title="Ctrl+S"
+                  >
+                    💾 Save
+                  </button>
+                  <button
+                    onClick={handleLoadDraft}
+                    className="px-4 py-2 text-sm bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg hover:from-blue-600 hover:to-cyan-600 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 font-medium"
+                  >
+                    📂 Load
+                  </button>
+                  <button
+                    onClick={handleClearDraft}
+                    className="px-4 py-2 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 font-medium"
+                  >
+                    🗑️ Clear
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Actions Bar */}
+            <div className="bg-gradient-to-r from-blue-50 via-purple-50 to-pink-50 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 p-4 rounded-xl border-2 border-dashed border-blue-300 dark:border-blue-600 mb-6">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">⚡</span>
+                  <span className="font-semibold text-gray-800 dark:text-gray-200">Quick Actions</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={handleUseLastSettings}
+                    className="px-4 py-2 text-sm bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg hover:from-blue-600 hover:to-cyan-600 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 font-medium"
+                    title="Load your last used settings"
+                  >
+                    🔄 Use Last Settings
+                  </button>
+                  <button
+                    onClick={() => setShowFavorites(true)}
+                    className="px-4 py-2 text-sm bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-lg hover:from-yellow-600 hover:to-orange-600 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 font-medium"
+                    title="View and load your favorite configurations"
+                  >
+                    ⭐ Favorites
+                  </button>
+                  <button
+                    onClick={handleSaveAsFavorite}
+                    className="px-4 py-2 text-sm bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-lg hover:from-pink-600 hover:to-rose-600 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 font-medium"
+                    title="Save current settings as a favorite"
+                  >
+                    💾 Save as Favorite
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -758,18 +1068,71 @@ export default function Home() {
                 <label className="block text-sm font-semibold text-gray-800 mb-4 flex items-center gap-2">
                   <span className="text-lg">📝</span>
                   Document Body
+                  <Tooltip content="Enter the main content of your document. Aim for at least 50 words for a professional document.">
+                    <span className="inline-flex items-center justify-center w-5 h-5 text-xs bg-amber-200 text-amber-800 rounded-full cursor-help hover:bg-amber-300">
+                      ?
+                    </span>
+                  </Tooltip>
                 </label>
                 <textarea
                   id="bodyText"
                   value={bodyText}
-                  onChange={(e) => setBodyText(e.target.value)}
+                  onChange={(e) => {
+                    setBodyText(e.target.value);
+                    if (showValidation) {
+                      const result = validateBodyText(e.target.value);
+                      setValidationErrors(prev => {
+                        const newErrors = { ...prev };
+                        if (result.error) {
+                          newErrors.bodyText = result.error;
+                        } else {
+                          delete newErrors.bodyText;
+                        }
+                        return newErrors;
+                      });
+                      setValidationWarnings(prev => {
+                        const newWarnings = { ...prev };
+                        if (result.warning) {
+                          newWarnings.bodyText = result.warning;
+                        } else {
+                          delete newWarnings.bodyText;
+                        }
+                        return newWarnings;
+                      });
+                    }
+                  }}
+                  onFocus={() => setShowValidation(true)}
                   rows={10}
-                  className="w-full px-4 py-3 border-2 border-amber-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white font-medium text-gray-800 hover:border-amber-300 resize-y"
+                  className={`w-full px-4 py-3 border-2 rounded-xl shadow-sm focus:outline-none focus:ring-2 bg-white font-medium text-gray-800 hover:border-amber-300 resize-y ${
+                    validationErrors.bodyText 
+                      ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
+                      : validationWarnings.bodyText
+                      ? 'border-yellow-300 focus:ring-yellow-500 focus:border-yellow-500'
+                      : 'border-amber-200 focus:ring-amber-500 focus:border-amber-500'
+                  }`}
                   placeholder="Enter the document body text here..."
                 />
-                <div className="mt-2 flex justify-between text-xs font-semibold text-gray-600 bg-white/50 px-3 py-2 rounded-lg">
+                {validationErrors.bodyText && (
+                  <div className="mt-2 text-sm text-red-600 flex items-center gap-1">
+                    <span>❌</span> {validationErrors.bodyText}
+                  </div>
+                )}
+                {validationWarnings.bodyText && !validationErrors.bodyText && (
+                  <div className="mt-2 text-sm text-yellow-600 flex items-center gap-1">
+                    <span>⚠️</span> {validationWarnings.bodyText}
+                  </div>
+                )}
+                <div className="mt-2 flex flex-wrap justify-between gap-2 text-xs font-semibold text-gray-600 bg-white/50 px-3 py-2 rounded-lg">
                   <span className="flex items-center gap-1">📝 {wordCount} words</span>
                   <span className="flex items-center gap-1">🔤 {characterCount} characters</span>
+                  {wordCount > 0 && (
+                    <>
+                      <span className="flex items-center gap-1">📖 ~{Math.ceil(wordCount / 200)} min read</span>
+                      <span className={`flex items-center gap-1 ${wordCount < 50 ? 'text-yellow-600' : wordCount > 1000 ? 'text-orange-600' : 'text-green-600'}`}>
+                        {wordCount < 50 ? '⚠️ Short' : wordCount > 1000 ? '⚠️ Long' : '✓ Good length'}
+                      </span>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -881,6 +1244,13 @@ export default function Home() {
       {showGuide && (
         <UserGuide onClose={() => setShowGuide(false)} />
       )}
+
+      {/* Favorites Panel */}
+      <FavoritesPanel
+        isOpen={showFavorites}
+        onClose={() => setShowFavorites(false)}
+        onLoad={handleLoadFavorite}
+      />
     </>
   );
 }
