@@ -153,7 +153,7 @@ export default function PrivacySettings({ isOpen, onClose }: PrivacySettingsProp
                   <span>🕵️</span> Private Mode
                 </h3>
                 <p className="text-sm text-purple-800 dark:text-purple-200 mt-1">
-                  When enabled, history and statistics won't be saved
+                  When enabled, history and statistics won&apos;t be saved
                 </p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">

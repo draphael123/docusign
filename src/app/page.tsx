@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { signatories } from "@/data/signatories";
 import { generatePDF } from "@/lib/pdfGenerator";
 import { Toaster, toast } from "react-hot-toast";
@@ -168,7 +168,7 @@ export default function Home() {
     }, 30000); // 30 seconds
 
     return () => clearInterval(autoSaveInterval);
-  }, [hasUnsavedChanges, bodyText, autoSaveEnabled, mounted]);
+  }, [hasUnsavedChanges, bodyText, autoSaveEnabled, mounted, handleAutoSave]);
 
   // Warn about unsaved changes before leaving
   useEffect(() => {
@@ -308,7 +308,7 @@ export default function Home() {
     lineSpacing,
   ]);
 
-  const handleAutoSave = () => {
+  const handleAutoSave = useCallback(() => {
     const draft: DraftData = {
       documentType,
       selectedSignatory,
@@ -330,7 +330,22 @@ export default function Home() {
     localStorage.setItem("lastSaved", now.toISOString());
     setLastSaved(now);
     setHasUnsavedChanges(false);
-  };
+  }, [
+    documentType,
+    selectedSignatory,
+    bodyText,
+    recipientName,
+    recipientTitle,
+    recipientAddress,
+    subject,
+    customSignatoryName,
+    customSignatoryTitle,
+    customSignatoryCompany,
+    customSignatoryPhone,
+    customSignatoryEmail,
+    fontSize,
+    lineSpacing,
+  ]);
 
   const handleSaveDraft = () => {
     const draft: DraftData = {
