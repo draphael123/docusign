@@ -18,6 +18,7 @@ import Tooltip from "@/components/Tooltip";
 import FavoritesPanel from "@/components/FavoritesPanel";
 import Confetti from "@/components/Confetti";
 import PrivacySettings from "@/components/PrivacySettings";
+import SkipToContent from "@/components/SkipToContent";
 import { 
   validateEmail, 
   validatePhone, 
@@ -677,19 +678,56 @@ export default function Home() {
 
   return (
     <>
+      {/* Structured Data for SEO */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "WebApplication",
+            name: "Document Template Generator",
+            description: "Generate professional PDF document templates quickly and easily with customizable formatting options.",
+            url: "https://docusign-redone.vercel.app",
+            applicationCategory: "BusinessApplication",
+            operatingSystem: "Any",
+            offers: {
+              "@type": "Offer",
+              price: "0",
+              priceCurrency: "USD",
+            },
+            featureList: [
+              "PDF document generation",
+              "Multiple document types",
+              "Custom signatories",
+              "Document templates",
+              "Auto-save functionality",
+              "Document history",
+              "Statistics tracking",
+            ],
+            screenshot: "https://docusign-redone.vercel.app/og-image.png",
+          }),
+        }}
+      />
+      <SkipToContent />
       <Toaster position="top-right" />
       {/* Animated background elements */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0" aria-hidden="true">
         <div className="absolute top-20 left-10 w-72 h-72 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-float"></div>
         <div className="absolute top-40 right-10 w-72 h-72 bg-blue-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-float" style={{ animationDelay: '2s' }}></div>
         <div className="absolute -bottom-8 left-1/2 w-72 h-72 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-float" style={{ animationDelay: '4s' }}></div>
       </div>
       
-      <div className="min-h-screen py-6 sm:py-12 px-4 sm:px-6 lg:px-8 relative z-10">
+      <main 
+        id="main-content" 
+        className="min-h-screen py-6 sm:py-12 px-4 sm:px-6 lg:px-8 relative z-10"
+        role="main"
+        aria-label="Document Generator"
+        tabIndex={-1}
+      >
         <div className="max-w-4xl mx-auto">
           <div className="bg-white/95 dark:bg-gray-800/95 shadow-2xl rounded-2xl p-6 sm:p-8 backdrop-blur-md border border-white/30 dark:border-gray-700/30 relative overflow-hidden">
             {/* Shimmer effect overlay */}
-            <div className="absolute inset-0 shimmer pointer-events-none"></div>
+            <div className="absolute inset-0 shimmer pointer-events-none" aria-hidden="true"></div>
             
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 relative z-10">
               <div className="mb-4 sm:mb-0">
@@ -1175,7 +1213,7 @@ export default function Home() {
             </div>
           </div>
         </div>
-      </div>
+      </main>
 
       {/* PDF Preview Modal */}
       {showPreview && previewUrl && (
