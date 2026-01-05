@@ -885,6 +885,82 @@ export default function Home() {
               </div>
             </div>
 
+            {/* How to Use & Benefits Section */}
+            <div className="mb-8 relative z-10">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* How to Use */}
+                <div className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 p-6 rounded-xl border-2 border-blue-200 dark:border-blue-700 shadow-lg">
+                  <h2 className="text-xl font-bold text-blue-900 dark:text-blue-300 mb-4 flex items-center gap-2">
+                    <span className="text-2xl">📋</span> How to Use
+                  </h2>
+                  <ol className="space-y-3 text-sm text-gray-700 dark:text-gray-300">
+                    <li className="flex items-start gap-3">
+                      <span className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">1</span>
+                      <span><strong>Select document type</strong> from 16+ professional templates</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">2</span>
+                      <span><strong>Add recipient details</strong> (optional: name, title, address)</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">3</span>
+                      <span><strong>Choose signatory</strong> or create a custom one</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">4</span>
+                      <span><strong>Write your content</strong> in the document body</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">5</span>
+                      <span><strong>Preview or download</strong> your professional PDF!</span>
+                    </li>
+                  </ol>
+                  <div className="mt-4 p-3 bg-blue-100 dark:bg-blue-800/30 rounded-lg">
+                    <p className="text-xs text-blue-800 dark:text-blue-200 flex items-center gap-2">
+                      <span>💡</span> <strong>Tip:</strong> Use Ctrl+S to save drafts anytime!
+                    </p>
+                  </div>
+                </div>
+
+                {/* Benefits */}
+                <div className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 p-6 rounded-xl border-2 border-purple-200 dark:border-purple-700 shadow-lg">
+                  <h2 className="text-xl font-bold text-purple-900 dark:text-purple-300 mb-4 flex items-center gap-2">
+                    <span className="text-2xl">✨</span> Key Benefits
+                  </h2>
+                  <ul className="space-y-3 text-sm text-gray-700 dark:text-gray-300">
+                    <li className="flex items-start gap-3">
+                      <span className="text-green-500 text-lg">✓</span>
+                      <span><strong>Save Time:</strong> Generate documents in minutes, not hours</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="text-green-500 text-lg">✓</span>
+                      <span><strong>Professional Quality:</strong> Consistent formatting every time</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="text-green-500 text-lg">✓</span>
+                      <span><strong>Auto-Save:</strong> Never lose your work with automatic backups</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="text-green-500 text-lg">✓</span>
+                      <span><strong>DocuSign Ready:</strong> PDFs are perfectly formatted for signing</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="text-green-500 text-lg">✓</span>
+                      <span><strong>Favorites & History:</strong> Quick access to your common documents</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="text-green-500 text-lg">✓</span>
+                      <span><strong>Privacy First:</strong> All data stays on your device - no cloud storage</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="text-green-500 text-lg">✓</span>
+                      <span><strong>Free Forever:</strong> No subscriptions, no hidden costs</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
             {/* Progress Indicator */}
             {showWizard && (
               <div className="mb-6 relative z-10">
