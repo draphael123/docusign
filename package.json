@@ -11,8 +11,10 @@
   "dependencies": {
     "date-fns": "^4.1.0",
     "jspdf": "^2.5.2",
+    "mammoth": "^1.11.0",
     "next": "^14.2.5",
     "openai": "^4.52.7",
+    "pdfjs-dist": "^5.4.530",
     "qrcode.react": "^3.1.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

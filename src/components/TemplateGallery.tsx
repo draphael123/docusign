@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { documentTemplates, DocumentTemplate } from "@/data/templates";
 
 interface TemplateGalleryProps {
@@ -45,6 +45,11 @@ export default function TemplateGallery({ onSelectTemplate, isOpen, onClose }: T
   const [formDescription, setFormDescription] = useState("");
   const [formBody, setFormBody] = useState("");
   const [formError, setFormError] = useState("");
+  
+  // File upload state
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [uploadedFileName, setUploadedFileName] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load user templates from localStorage
   useEffect(() => {
@@ -73,6 +78,92 @@ export default function TemplateGallery({ onSelectTemplate, isOpen, onClose }: T
     setFormDescription("");
     setFormBody("");
     setFormError("");
+    setUploadedFileName("");
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  // Extract text from Word document
+  const extractTextFromWord = async (file: File): Promise<string> => {
+    const mammoth = await import("mammoth");
+    const arrayBuffer = await file.arrayBuffer();
+    const result = await mammoth.extractRawText({ arrayBuffer });
+    return result.value;
+  };
+
+  // Extract text from PDF
+  const extractTextFromPDF = async (file: File): Promise<string> => {
+    const pdfjsLib = await import("pdfjs-dist");
+    
+    // Set worker source
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+    
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    
+    let fullText = "";
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const textContent = await page.getTextContent();
+      const pageText = textContent.items
+        .map((item: any) => item.str)
+        .join(" ");
+      fullText += pageText + "\n\n";
+    }
+    
+    return fullText.trim();
+  };
+
+  // Handle file upload
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const fileName = file.name.toLowerCase();
+    const isWord = fileName.endsWith(".docx") || fileName.endsWith(".doc");
+    const isPDF = fileName.endsWith(".pdf");
+
+    if (!isWord && !isPDF) {
+      setFormError("Please upload a .docx or .pdf file");
+      return;
+    }
+
+    setIsProcessing(true);
+    setFormError("");
+    setUploadedFileName(file.name);
+
+    try {
+      let extractedText = "";
+
+      if (isWord) {
+        extractedText = await extractTextFromWord(file);
+      } else if (isPDF) {
+        extractedText = await extractTextFromPDF(file);
+      }
+
+      if (!extractedText.trim()) {
+        setFormError("Could not extract text from the file. The file may be empty or image-based.");
+        setUploadedFileName("");
+        return;
+      }
+
+      // Set form values
+      setFormBody(extractedText);
+      
+      // Auto-fill name from filename if empty
+      if (!formName) {
+        const nameWithoutExt = file.name.replace(/\.(docx?|pdf)$/i, "");
+        setFormName(nameWithoutExt);
+      }
+
+    } catch (error) {
+      console.error("Error processing file:", error);
+      setFormError("Error processing file. Please try a different file or paste the content manually.");
+      setUploadedFileName("");
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleCreateTemplate = () => {
@@ -209,6 +300,68 @@ export default function TemplateGallery({ onSelectTemplate, isOpen, onClose }: T
               )}
 
               <div className="space-y-4">
+                {/* File Upload */}
+                <div>
+                  <label className="block text-sm text-[#666666] mb-2">
+                    Upload Document
+                  </label>
+                  <div 
+                    className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                      isProcessing 
+                        ? "border-[#d4a373] bg-[#d4a373]/5" 
+                        : "border-[#2a2a2a] hover:border-[#3a3a3a]"
+                    }`}
+                  >
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".doc,.docx,.pdf"
+                      onChange={handleFileUpload}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      disabled={isProcessing}
+                    />
+                    {isProcessing ? (
+                      <div className="text-[#d4a373]">
+                        <div className="mb-2">Processing...</div>
+                        <div className="text-sm text-[#666666]">{uploadedFileName}</div>
+                      </div>
+                    ) : uploadedFileName ? (
+                      <div>
+                        <div className="text-[#4ade80] mb-1">File loaded</div>
+                        <div className="text-sm text-[#a0a0a0]">{uploadedFileName}</div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setUploadedFileName("");
+                            setFormBody("");
+                            if (fileInputRef.current) {
+                              fileInputRef.current.value = "";
+                            }
+                          }}
+                          className="mt-2 text-xs text-[#666666] hover:text-[#a0a0a0]"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ) : (
+                      <div>
+                        <div className="text-[#a0a0a0] mb-1">
+                          Drop a file here or click to upload
+                        </div>
+                        <div className="text-sm text-[#666666]">
+                          Supports .docx and .pdf files
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-4">
+                  <div className="flex-1 h-px bg-[#2a2a2a]" />
+                  <span className="text-sm text-[#666666]">or type manually</span>
+                  <div className="flex-1 h-px bg-[#2a2a2a]" />
+                </div>
+
                 <div>
                   <label className="block text-sm text-[#666666] mb-1">
                     Template Name *
@@ -274,9 +427,16 @@ export default function TemplateGallery({ onSelectTemplate, isOpen, onClose }: T
                 </div>
 
                 <div>
-                  <label className="block text-sm text-[#666666] mb-1">
-                    Template Content *
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-sm text-[#666666]">
+                      Template Content *
+                    </label>
+                    {formBody && (
+                      <span className="text-xs text-[#666666]">
+                        {formBody.length} characters
+                      </span>
+                    )}
+                  </div>
                   <textarea
                     value={formBody}
                     onChange={(e) => {
@@ -284,7 +444,7 @@ export default function TemplateGallery({ onSelectTemplate, isOpen, onClose }: T
                       setFormError("");
                     }}
                     rows={10}
-                    placeholder="Enter your template text. Use [brackets] for placeholder text that users should replace."
+                    placeholder="Enter your template text or upload a document above. Use [brackets] for placeholder text."
                     className="w-full px-4 py-3 rounded-lg bg-[#242424] border border-[#2a2a2a] text-[#fafafa] placeholder-[#666666] focus:border-[#d4a373] focus:outline-none resize-y"
                   />
                   <p className="mt-1 text-xs text-[#666666]">
@@ -295,7 +455,8 @@ export default function TemplateGallery({ onSelectTemplate, isOpen, onClose }: T
                 <div className="flex gap-3 pt-2">
                   <button
                     onClick={handleCreateTemplate}
-                    className="flex-1 px-4 py-2.5 bg-[#d4a373] text-[#0f0f0f] rounded-lg hover:bg-[#e5b888] transition-colors font-medium"
+                    disabled={isProcessing}
+                    className="flex-1 px-4 py-2.5 bg-[#d4a373] text-[#0f0f0f] rounded-lg hover:bg-[#e5b888] transition-colors font-medium disabled:opacity-50"
                   >
                     Create Template
                   </button>
