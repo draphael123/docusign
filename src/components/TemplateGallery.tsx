@@ -89,33 +89,68 @@ export default function TemplateGallery({ onSelectTemplate, isOpen, onClose }: T
 
   // Extract text from Word document
   const extractTextFromWord = async (file: File): Promise<string> => {
-    const mammoth = await import("mammoth");
-    const arrayBuffer = await file.arrayBuffer();
-    const result = await mammoth.extractRawText({ arrayBuffer });
-    return result.value;
+    try {
+      const mammoth = await import("mammoth");
+      const arrayBuffer = await file.arrayBuffer();
+      const result = await mammoth.extractRawText({ arrayBuffer });
+      return result.value;
+    } catch (error) {
+      console.error("Mammoth error:", error);
+      throw new Error("Could not read Word document. Make sure it's a valid .docx file.");
+    }
   };
 
   // Extract text from PDF
   const extractTextFromPDF = async (file: File): Promise<string> => {
-    const pdfjsLib = await import("pdfjs-dist");
-    
-    // Set worker source
-    pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
-    
-    const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-    
-    let fullText = "";
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const textContent = await page.getTextContent();
-      const pageText = textContent.items
-        .map((item: any) => item.str)
-        .join(" ");
-      fullText += pageText + "\n\n";
+    try {
+      const pdfjsLib = await import("pdfjs-dist");
+      
+      // Disable worker for simpler, more reliable operation
+      // @ts-ignore
+      pdfjsLib.GlobalWorkerOptions.workerSrc = "";
+      
+      const arrayBuffer = await file.arrayBuffer();
+      
+      // Load document with useWorkerFetch disabled
+      const loadingTask = pdfjsLib.getDocument({ 
+        data: arrayBuffer,
+        useWorkerFetch: false,
+        isEvalSupported: false,
+        useSystemFonts: true,
+      });
+      
+      const pdf = await loadingTask.promise;
+      
+      let fullText = "";
+      for (let i = 1; i <= pdf.numPages; i++) {
+        try {
+          const page = await pdf.getPage(i);
+          const textContent = await page.getTextContent();
+          const pageText = textContent.items
+            .filter((item: any) => item.str)
+            .map((item: any) => item.str)
+            .join(" ");
+          fullText += pageText + "\n\n";
+        } catch (pageError) {
+          console.warn(`Error reading page ${i}:`, pageError);
+        }
+      }
+      
+      if (!fullText.trim()) {
+        throw new Error("No text content found");
+      }
+      
+      return fullText.trim();
+    } catch (pdfJsError: any) {
+      console.error("PDF.js error:", pdfJsError);
+      
+      // Provide helpful error message
+      if (pdfJsError.message?.includes("Invalid PDF")) {
+        throw new Error("Invalid PDF file. Please make sure the file is not corrupted.");
+      }
+      
+      throw new Error("Could not read PDF. The file may be image-based (scanned) or corrupted. Try a text-based PDF or paste content manually.");
     }
-    
-    return fullText.trim();
   };
 
   // Handle file upload
@@ -124,11 +159,18 @@ export default function TemplateGallery({ onSelectTemplate, isOpen, onClose }: T
     if (!file) return;
 
     const fileName = file.name.toLowerCase();
-    const isWord = fileName.endsWith(".docx") || fileName.endsWith(".doc");
+    const isDocx = fileName.endsWith(".docx");
+    const isDoc = fileName.endsWith(".doc");
     const isPDF = fileName.endsWith(".pdf");
 
-    if (!isWord && !isPDF) {
+    if (!isDocx && !isDoc && !isPDF) {
       setFormError("Please upload a .docx or .pdf file");
+      return;
+    }
+
+    // .doc format (old Word) is not supported
+    if (isDoc) {
+      setFormError("Old .doc format is not supported. Please save as .docx and try again, or paste the content manually.");
       return;
     }
 
@@ -139,17 +181,23 @@ export default function TemplateGallery({ onSelectTemplate, isOpen, onClose }: T
     try {
       let extractedText = "";
 
-      if (isWord) {
+      if (isDocx) {
         extractedText = await extractTextFromWord(file);
       } else if (isPDF) {
         extractedText = await extractTextFromPDF(file);
       }
 
       if (!extractedText.trim()) {
-        setFormError("Could not extract text from the file. The file may be empty or image-based.");
+        setFormError("Could not extract text from the file. The file may be empty or image-based (scanned).");
         setUploadedFileName("");
         return;
       }
+
+      // Clean up extracted text
+      extractedText = extractedText
+        .replace(/\s+/g, " ")
+        .replace(/\n\s*\n/g, "\n\n")
+        .trim();
 
       // Set form values
       setFormBody(extractedText);
@@ -160,12 +208,17 @@ export default function TemplateGallery({ onSelectTemplate, isOpen, onClose }: T
         setFormName(nameWithoutExt);
       }
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error processing file:", error);
-      setFormError("Error processing file. Please try a different file or paste the content manually.");
+      const errorMessage = error?.message || "Error processing file. Please try a different file or paste the content manually.";
+      setFormError(errorMessage);
       setUploadedFileName("");
     } finally {
       setIsProcessing(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   };
 
