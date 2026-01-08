@@ -1018,13 +1018,6 @@ export default function Home() {
         } 
       }} />
 
-      {/* Floating Background Shapes */}
-      <div className="floating-shapes" aria-hidden="true">
-        <div className="absolute w-32 h-32 bg-gradient-to-br from-violet-500/20 to-pink-500/20 rounded-full blur-xl float" style={{ top: '15%', left: '5%' }} />
-        <div className="absolute w-24 h-24 bg-gradient-to-br from-teal-500/20 to-cyan-500/20 rounded-full blur-xl float-slow" style={{ top: '60%', right: '8%' }} />
-        <div className="absolute w-20 h-20 bg-gradient-to-br from-orange-500/20 to-gold-500/20 rounded-full blur-xl float-fast" style={{ bottom: '20%', left: '15%' }} />
-      </div>
-
       {/* Sidebar */}
       {mounted && !appSettings.focusMode && (
         <Sidebar 
@@ -1042,11 +1035,11 @@ export default function Home() {
             {!appSettings.focusMode && (
             <header className={`${appSettings.compactMode ? "mb-4" : "mb-8"} animate-fade-in`}>
               <div className="flex items-center justify-between mb-6">
-                <div className="relative">
-                  <h1 className={`${appSettings.compactMode ? "text-2xl" : "text-3xl sm:text-4xl"} font-semibold mb-1 gradient-text`}>
-                    ✨ Document Generator
+                <div>
+                  <h1 className={`${appSettings.compactMode ? "text-2xl" : "text-3xl sm:text-4xl"} font-semibold mb-1 ${textPrimary}`}>
+                    Document Generator
                   </h1>
-                  <p className={`text-sm text-gray-500`}>Create professional PDF documents for DocuSign</p>
+                  <p className={`text-sm ${textMuted}`}>Create professional PDF documents for DocuSign</p>
                 </div>
                 <div className="flex items-center gap-2">
                   {mounted && (
@@ -1167,19 +1160,19 @@ export default function Home() {
             {/* Form */}
             <div className="space-y-8">
               {/* Document Type */}
-              <section className={`p-5 rounded-xl ${bgSecondary} border ${borderColor} border-l-4 border-l-[#a78bfa] tilt-hover sparkle`}>
-                <label htmlFor="documentType" className="block text-sm font-medium text-[#a78bfa] mb-2 flex items-center gap-2">
-                  <span className="icon-bounce inline-block">📄</span> Document Type
+              <section className={`p-5 rounded-xl ${bgSecondary} border ${borderColor}`}>
+                <label htmlFor="documentType" className={`block text-sm font-medium ${textMuted} mb-2`}>
+                  Document Type
                 </label>
-                <select id="documentType" value={documentType} onChange={(e) => setDocumentType(e.target.value)} className={`w-full px-4 py-3 rounded-lg ${textPrimary} ${bgElevated} border ${borderColor} focus:border-[#a78bfa] cursor-pointer rainbow-focus transition-all`}>
+                <select id="documentType" value={documentType} onChange={(e) => setDocumentType(e.target.value)} className={`w-full px-4 py-3 rounded-lg ${textPrimary} ${bgElevated} border ${borderColor} focus:border-[#a78bfa] focus:ring-1 focus:ring-[#a78bfa]/20 cursor-pointer transition-colors`}>
                   {documentTypes.map((type) => (<option key={type} value={type}>{type}</option>))}
                 </select>
               </section>
 
               {/* Recipient */}
-              <section className={`p-5 rounded-xl ${bgSecondary} border ${borderColor} border-l-4 border-l-[#4ecdc4] tilt-hover sparkle`}>
+              <section className={`p-5 rounded-xl ${bgSecondary} border ${borderColor}`}>
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg text-[#4ecdc4] flex items-center gap-2"><span className="icon-bounce inline-block">👤</span> Recipient</h2>
+                  <h2 className={`text-sm font-medium ${textMuted}`}>Recipient</h2>
                   <div className="flex gap-2">
                     <button onClick={() => setShowAddressBook(true)} className={`text-xs px-2 py-1 ${bgElevated} border ${borderColor} rounded hover:border-[#4ecdc4] hover:text-[#4ecdc4] transition-colors ${textMuted}`}>
                       Address Book ({savedRecipients.length})
@@ -1212,8 +1205,8 @@ export default function Home() {
               </section>
 
               {/* Signatory */}
-              <section className={`p-5 rounded-xl ${bgSecondary} border ${borderColor} border-l-4 border-l-[#f472b6] tilt-hover sparkle`}>
-                <h2 className="text-lg text-[#f472b6] mb-4 flex items-center gap-2"><span className="icon-bounce inline-block">✍️</span> Signatory</h2>
+              <section className={`p-5 rounded-xl ${bgSecondary} border ${borderColor}`}>
+                <h2 className={`text-sm font-medium ${textMuted} mb-4`}>Signatory</h2>
                 <div className="space-y-2">
                   {signatories.map((signatory) => (
                     <label key={signatory.id} className={`flex items-center p-4 rounded-lg cursor-pointer transition-all border ${!useCustomSignatory && selectedSignatory === signatory.id ? `${bgElevated} border-[#f472b6] shadow-lg shadow-[#f472b6]/10` : `${bgElevated} ${borderColor} hover:border-[#f472b6]/50`}`}>
@@ -1253,8 +1246,8 @@ export default function Home() {
               </section>
 
               {/* Formatting */}
-              <section className={`p-5 rounded-xl ${bgSecondary} border ${borderColor} border-l-4 border-l-[#60a5fa] tilt-hover sparkle`}>
-                <h2 className="text-lg text-[#60a5fa] mb-4 flex items-center gap-2"><span className="icon-bounce inline-block">🎨</span> Formatting</h2>
+              <section className={`p-5 rounded-xl ${bgSecondary} border ${borderColor}`}>
+                <h2 className={`text-sm font-medium ${textMuted} mb-4`}>Formatting</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div>
                     <label htmlFor="fontSize" className={`block text-sm ${textMuted} mb-2`}>Font Size: <span className="text-[#a78bfa]">{fontSize}pt</span></label>
@@ -1268,9 +1261,9 @@ export default function Home() {
               </section>
 
               {/* Document Body */}
-              <section className={`p-5 rounded-xl ${bgSecondary} border ${borderColor} border-l-4 border-l-[#f0b866] tilt-hover sparkle`}>
+              <section className={`p-5 rounded-xl ${bgSecondary} border ${borderColor}`}>
                 <div className="flex items-center justify-between mb-2">
-                  <label htmlFor="bodyText" className="text-sm font-medium text-[#f0b866] flex items-center gap-2"><span className="icon-bounce inline-block">📝</span> Document Body</label>
+                  <label htmlFor="bodyText" className={`text-sm font-medium ${textMuted}`}>Document Body</label>
                   <div className="flex items-center gap-3">
                     {showWordGoal && wordCountGoal > 0 && (
                       <div className="flex items-center gap-2">
@@ -1348,13 +1341,13 @@ export default function Home() {
 
               {/* Actions */}
               <section className="flex flex-col sm:flex-row gap-3 pt-4">
-                <button onClick={handlePreviewPDF} disabled={isGenerating || !bodyText.trim()} className={`flex-1 px-6 py-3 rounded-xl ${textPrimary} ${bgSecondary} border-2 border-[#60a5fa] hover:bg-[#60a5fa]/10 hover:shadow-lg hover:shadow-[#60a5fa]/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all font-medium magnetic-btn sparkle`}>
-                  {isGenerating ? "⏳ Generating..." : "👁️ Preview PDF"}
+                <button onClick={handlePreviewPDF} disabled={isGenerating || !bodyText.trim()} className={`flex-1 px-5 py-2.5 rounded-lg ${textPrimary} ${bgElevated} border ${borderColor} hover:border-[#a78bfa] disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-medium`}>
+                  {isGenerating ? "Generating..." : "Preview"}
                 </button>
-                <button onClick={handleGeneratePDF} disabled={isGenerating || !bodyText.trim()} className="flex-1 px-6 py-3 rounded-xl text-white btn-rainbow hover:opacity-90 hover:shadow-lg hover:shadow-[#a78bfa]/30 disabled:opacity-40 disabled:cursor-not-allowed transition-all font-medium magnetic-btn elastic-click glow-pulse">
-                  {isGenerating ? "⏳ Generating..." : "✨ Download PDF"}
+                <button onClick={handleGeneratePDF} disabled={isGenerating || !bodyText.trim()} className="flex-1 px-5 py-2.5 rounded-lg text-white bg-[#a78bfa] hover:bg-[#9171e8] disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-medium">
+                  {isGenerating ? "Generating..." : "Download PDF"}
                 </button>
-                <button onClick={handleExportWord} disabled={isGenerating || !bodyText.trim()} className={`px-6 py-3 rounded-xl ${textPrimary} ${bgSecondary} border-2 border-[#4ecdc4] hover:bg-[#4ecdc4]/10 hover:shadow-lg hover:shadow-[#4ecdc4]/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all font-medium magnetic-btn sparkle`}>
+                <button onClick={handleExportWord} disabled={isGenerating || !bodyText.trim()} className={`px-5 py-2.5 rounded-lg ${textPrimary} ${bgElevated} border ${borderColor} hover:border-[#a78bfa] disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-medium`}>
                   Export Word
                 </button>
               </section>
