@@ -239,9 +239,9 @@ export default function TemplateGallery({ onSelectTemplate, isOpen, onClose }: T
       // Use dynamic import for pdf.js v4
       const pdfjsLib = await import("pdfjs-dist");
       
-      // Configure worker - using CDN for reliability
+      // Configure worker - using unpkg CDN (more reliable for npm packages)
       const PDFJS_VERSION = "4.0.379";
-      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VERSION}/pdf.worker.min.js`;
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${PDFJS_VERSION}/build/pdf.worker.min.mjs`;
       
       console.log("PDF.js version:", PDFJS_VERSION);
       console.log("Loading PDF file:", file.name, "Size:", file.size, "bytes");
