@@ -17,6 +17,13 @@ import FavoritesPanel from "@/components/FavoritesPanel";
 import Confetti from "@/components/Confetti";
 import PrivacySettings from "@/components/PrivacySettings";
 import SkipToContent from "@/components/SkipToContent";
+import SettingsPanel, { AppSettings, DEFAULT_SETTINGS } from "@/components/SettingsPanel";
+import PomodoroTimer from "@/components/PomodoroTimer";
+import StreakDisplay, { useStreak } from "@/components/StreakTracker";
+import QuickTemplates, { usePinnedTemplates } from "@/components/QuickTemplates";
+import ProfileManager, { useProfiles, SenderProfile, RecipientProfile } from "@/components/ProfileManager";
+import VersionHistory, { useVersionHistory } from "@/components/VersionHistory";
+import { useSoundEffects } from "@/hooks/useSoundEffects";
 import {
   saveLastUsedSettings,
   getLastUsedSettings,
@@ -128,6 +135,20 @@ export default function Home() {
   // Textarea ref for cursor manipulation
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // New feature states
+  const [showSettings, setShowSettings] = useState<boolean>(false);
+  const [showProfiles, setShowProfiles] = useState<boolean>(false);
+  const [showVersionHistory, setShowVersionHistory] = useState<boolean>(false);
+  const [showStreaks, setShowStreaks] = useState<boolean>(false);
+  const [appSettings, setAppSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
+  const [isOnline, setIsOnline] = useState<boolean>(true);
+
+  // Hooks for new features
+  const { recordDocument } = useStreak();
+  const { pinnedIds, togglePin, isPinned } = usePinnedTemplates();
+  const { saveVersion } = useVersionHistory();
+  const { playSound } = useSoundEffects(appSettings.soundEffects);
+
   // Initialize
   useEffect(() => {
     setMounted(true);
@@ -165,6 +186,28 @@ export default function Home() {
       // Load auto-capitalize setting
       const autoCap = localStorage.getItem("autoCapitalize");
       if (autoCap === "true") setAutoCapitalize(true);
+
+      // Load app settings
+      const savedSettings = localStorage.getItem("appSettings");
+      if (savedSettings) {
+        try {
+          setAppSettings(JSON.parse(savedSettings));
+        } catch (e) {
+          console.error("Error loading settings:", e);
+        }
+      }
+
+      // Online status
+      setIsOnline(navigator.onLine);
+      const handleOnline = () => setIsOnline(true);
+      const handleOffline = () => setIsOnline(false);
+      window.addEventListener("online", handleOnline);
+      window.addEventListener("offline", handleOffline);
+      
+      return () => {
+        window.removeEventListener("online", handleOnline);
+        window.removeEventListener("offline", handleOffline);
+      };
     }
   }, []);
 
@@ -332,9 +375,50 @@ export default function Home() {
     document.documentElement.classList.toggle("light", newTheme === "light");
   };
 
+  // Settings handler
+  const handleSettingsChange = (newSettings: AppSettings) => {
+    setAppSettings(newSettings);
+    localStorage.setItem("appSettings", JSON.stringify(newSettings));
+    
+    // Apply animated background
+    if (newSettings.animatedBackground) {
+      document.body.classList.add("animated-bg");
+    } else {
+      document.body.classList.remove("animated-bg");
+    }
+    
+    // Apply compact mode
+    if (newSettings.compactMode) {
+      document.body.classList.add("compact-mode");
+    } else {
+      document.body.classList.remove("compact-mode");
+    }
+  };
+
+  // Profile handlers
+  const handleSelectSenderProfile = (profile: SenderProfile) => {
+    setCustomSignatoryName(profile.name);
+    setCustomSignatoryTitle(profile.title);
+    setCustomSignatoryCompany(profile.company);
+    setCustomSignatoryPhone(profile.phone);
+    setCustomSignatoryEmail(profile.email);
+    setUseCustomSignatory(true);
+    playSound("success");
+    toast.success(`Loaded profile: ${profile.name}`);
+  };
+
+  const handleSelectRecipientProfile = (profile: RecipientProfile) => {
+    setRecipientName(profile.name);
+    setRecipientTitle(profile.title);
+    setRecipientAddress(profile.address);
+    playSound("success");
+    toast.success(`Loaded recipient: ${profile.name}`);
+  };
+
   // Handlers
   const handleSaveDraft = () => {
     handleAutoSave();
+    playSound("save");
     toast.success("Draft saved");
   };
 
@@ -582,6 +666,7 @@ export default function Home() {
   const handleGeneratePDF = async () => {
     if (!bodyText.trim()) {
       toast.error("Please enter document body text");
+      playSound("error");
       return;
     }
     setIsGenerating(true);
@@ -606,14 +691,26 @@ export default function Home() {
       if (!isPrivateMode) {
         saveToHistory({ documentType, signatoryName: signatory.name });
         const { newAchievements } = updateStats(documentType, signatory.name);
-        if (newAchievements.length > 0) {
+        
+        // Record for streak tracking
+        const streakAchievements = recordDocument();
+        const allAchievements = [...newAchievements, ...streakAchievements];
+        
+        if (allAchievements.length > 0 && appSettings.confettiEnabled) {
           setShowConfetti(true);
-          newAchievements.forEach((a) => toast.success(`Achievement: ${a}`, { duration: 5000 }));
+          allAchievements.forEach((a) => toast.success(`Achievement: ${a}`, { duration: 5000 }));
+        }
+        
+        // Save version
+        if (appSettings.versionHistoryEnabled) {
+          saveVersion(documentType, bodyText);
         }
       }
       saveLastUsedSettings({ documentType, selectedSignatory, useCustomSignatory, customSignatoryName, customSignatoryTitle, customSignatoryCompany, customSignatoryPhone, customSignatoryEmail, fontSize, lineSpacing });
+      playSound("complete");
       toast.success("PDF downloaded");
     } catch (error: any) {
+      playSound("error");
       toast.error(error.message || "Error generating PDF");
     } finally {
       setIsGenerating(false);
@@ -716,14 +813,15 @@ export default function Home() {
       <SkipToContent />
       <Toaster position="bottom-right" toastOptions={{ style: { background: theme === "light" ? "#fff" : "#1a1a24", color: theme === "light" ? "#1a1a2e" : "#fafafa", border: `1px solid ${theme === "light" ? "#e0e0ee" : "#2a2a3a"}`, boxShadow: '0 4px 20px rgba(167, 139, 250, 0.15)' } }} />
 
-      <div className={`min-h-screen ${bgPrimary} transition-colors`}>
-        <main id="main-content" className={`py-8 px-4 sm:px-6 lg:px-8 ${showLivePreview ? "lg:pr-[420px]" : ""}`} role="main" tabIndex={-1}>
-          <div className="max-w-3xl mx-auto animate-fade-in">
+      <div className={`min-h-screen ${bgPrimary} transition-colors ${appSettings.compactMode ? "compact-mode" : ""}`}>
+        <main id="main-content" className={`${appSettings.compactMode ? "py-4 px-3" : "py-8 px-4 sm:px-6 lg:px-8"} ${showLivePreview ? "lg:pr-[420px]" : ""}`} role="main" tabIndex={-1}>
+          <div className={`${appSettings.compactMode ? "max-w-2xl" : "max-w-3xl"} mx-auto animate-fade-in`}>
             {/* Header */}
-            <header className="mb-8">
+            {!appSettings.focusMode && (
+            <header className={appSettings.compactMode ? "mb-4" : "mb-8"}>
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h1 className="text-3xl sm:text-4xl mb-1 gradient-text" style={{ fontFamily: "'Crimson Pro', serif" }}>
+                  <h1 className={`${appSettings.compactMode ? "text-2xl" : "text-3xl sm:text-4xl"} mb-1 gradient-text`} style={{ fontFamily: "'Crimson Pro', serif" }}>
                     Document Generator
                   </h1>
                   <p className={`text-sm ${textMuted}`}>Create professional PDF documents for DocuSign</p>
@@ -748,17 +846,23 @@ export default function Home() {
                 <button onClick={() => setShowFavorites(true)} className="px-3 py-1.5 text-sm text-[#f472b6] hover:text-[#f9a8d4] hover:bg-[#f472b6]/10 rounded transition-colors">Favorites</button>
                 <button onClick={() => setShowHistory(true)} className="px-3 py-1.5 text-sm text-[#4ecdc4] hover:text-[#7eddd6] hover:bg-[#4ecdc4]/10 rounded transition-colors">History</button>
                 <button onClick={() => setShowStatistics(true)} className="px-3 py-1.5 text-sm text-[#60a5fa] hover:text-[#93c5fd] hover:bg-[#60a5fa]/10 rounded transition-colors">Stats</button>
+                <button onClick={() => setShowProfiles(true)} className="px-3 py-1.5 text-sm text-[#fb923c] hover:text-[#fdba74] hover:bg-[#fb923c]/10 rounded transition-colors">Profiles</button>
+                <button onClick={() => setShowVersionHistory(true)} className="px-3 py-1.5 text-sm text-[#4ade80] hover:text-[#86efac] hover:bg-[#4ade80]/10 rounded transition-colors">Versions</button>
                 <div className="flex-1" />
+                <button onClick={() => setShowStreaks(true)} className="px-2 py-1 text-sm flex items-center gap-1 text-[#f87171] hover:bg-[#f87171]/10 rounded transition-colors" title="View streak">
+                  🔥
+                </button>
                 <button onClick={() => setShowLivePreview(!showLivePreview)} className={`px-3 py-1.5 text-sm rounded transition-all ${showLivePreview ? "bg-gradient-to-r from-[#a78bfa] to-[#4ecdc4] text-white shadow-lg shadow-[#a78bfa]/25" : "text-[#f0b866] hover:text-[#f5c97a] hover:bg-[#f0b866]/10"}`}>
                   {showLivePreview ? "Hide Preview" : "Live Preview"}
                 </button>
                 <button onClick={handleSaveDraft} className={`px-3 py-1.5 text-sm ${textSecondary} hover:text-[#4ade80] hover:bg-[#4ade80]/10 rounded transition-colors`} title="Ctrl+S">Save</button>
                 <button onClick={handleLoadDraft} className={`px-3 py-1.5 text-sm ${textSecondary} hover:text-[#60a5fa] hover:bg-[#60a5fa]/10 rounded transition-colors`}>Load</button>
                 <button onClick={handleClearDraft} className={`px-3 py-1.5 text-sm ${textSecondary} hover:text-[#ff7a7a] hover:bg-[#ff7a7a]/10 rounded transition-colors`}>Clear</button>
+                <button onClick={() => setShowSettings(true)} className="px-2 py-1.5 text-sm text-[#a0a0a0] hover:text-white hover:bg-[#2a2a3a] rounded transition-colors" title="Settings">⚙️</button>
               </nav>
 
               {/* Recently Used */}
-              {recentDocTypes.length > 1 && (
+              {recentDocTypes.length > 1 && !appSettings.focusMode && (
                 <div className={`mt-4 flex flex-wrap items-center gap-2 text-xs ${textMuted}`}>
                   <span className="text-[#a78bfa]">Recent:</span>
                   {recentDocTypes.slice(0, 3).map((type, idx) => {
@@ -772,7 +876,14 @@ export default function Home() {
                   })}
                 </div>
               )}
+              
+              {/* Quick Templates */}
+              <QuickTemplates 
+                templates={[...documentTemplates]}
+                onSelectTemplate={handleSelectTemplate}
+              />
             </header>
+            )}
 
             {/* Form */}
             <div className="space-y-8">
@@ -1020,8 +1131,67 @@ export default function Home() {
       <DocumentHistory isOpen={showHistory} onClose={() => setShowHistory(false)} onLoadDocument={handleLoadFromHistory} />
       {showGuide && <UserGuide onClose={() => setShowGuide(false)} />}
       <FavoritesPanel isOpen={showFavorites} onClose={() => setShowFavorites(false)} onLoad={handleLoadFavorite} />
-      <Confetti trigger={showConfetti} onComplete={() => setShowConfetti(false)} />
+      <Confetti trigger={showConfetti && appSettings.confettiEnabled} onComplete={() => setShowConfetti(false)} />
       <PrivacySettings isOpen={showPrivacySettings} onClose={() => setShowPrivacySettings(false)} />
+      
+      {/* New Features */}
+      <SettingsPanel 
+        isOpen={showSettings} 
+        onClose={() => setShowSettings(false)} 
+        settings={appSettings} 
+        onSettingsChange={handleSettingsChange} 
+      />
+      <ProfileManager 
+        isOpen={showProfiles} 
+        onClose={() => setShowProfiles(false)} 
+        onSelectSender={handleSelectSenderProfile}
+        onSelectRecipient={handleSelectRecipientProfile}
+      />
+      <VersionHistory 
+        isOpen={showVersionHistory} 
+        onClose={() => setShowVersionHistory(false)} 
+        onRestore={(text) => { setBodyText(text); toast.success("Version restored"); }}
+        currentBodyText={bodyText}
+        documentType={documentType}
+      />
+      
+      {/* Streak Modal */}
+      {showStreaks && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowStreaks(false)}>
+          <div onClick={(e) => e.stopPropagation()} className="max-w-md w-full">
+            <StreakDisplay />
+            <button onClick={() => setShowStreaks(false)} className="mt-4 w-full py-2 rounded-lg bg-[#2a2a3a] text-white hover:bg-[#3a3a4a] transition-colors">
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+      
+      {/* Pomodoro Timer */}
+      <PomodoroTimer 
+        minutes={appSettings.pomodoroMinutes} 
+        isEnabled={appSettings.pomodoroEnabled} 
+        onComplete={() => { playSound("complete"); toast.success("Pomodoro complete! Take a break."); }}
+        soundEnabled={appSettings.soundEffects}
+      />
+      
+      {/* Offline Indicator */}
+      {!isOnline && (
+        <div className="fixed bottom-4 left-4 px-4 py-2 rounded-lg bg-[#f87171] text-white text-sm shadow-lg z-50 flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+          Offline Mode
+        </div>
+      )}
+      
+      {/* Focus Mode Overlay */}
+      {appSettings.focusMode && (
+        <button 
+          onClick={() => handleSettingsChange({ ...appSettings, focusMode: false })}
+          className="fixed top-4 right-4 px-3 py-1.5 rounded-lg bg-[#2a2a3a] text-white text-sm z-50 hover:bg-[#3a3a4a] transition-colors"
+        >
+          Exit Focus Mode
+        </button>
+      )}
     </>
   );
 }

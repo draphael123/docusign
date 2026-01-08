@@ -265,3 +265,116 @@ input[type="range"]::-moz-range-thumb {
   border: none;
   box-shadow: 0 2px 6px rgba(0,0,0,0.3);
 }
+
+/* Compact mode */
+.compact-mode {
+  font-size: 14px;
+}
+
+.compact-mode section {
+  padding: 1rem !important;
+}
+
+.compact-mode .space-y-8 > * + * {
+  margin-top: 1rem;
+}
+
+.compact-mode input,
+.compact-mode textarea,
+.compact-mode select {
+  padding: 0.5rem 0.75rem !important;
+}
+
+/* Animated background - enhanced */
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-20px) rotate(5deg); }
+}
+
+@keyframes pulse-slow {
+  0%, 100% { opacity: 0.15; transform: scale(1); }
+  50% { opacity: 0.25; transform: scale(1.1); }
+}
+
+body.animated-bg::before {
+  animation: float 20s ease-in-out infinite, pulse-slow 8s ease-in-out infinite;
+}
+
+body.animated-bg::after {
+  animation: float 25s ease-in-out infinite reverse, pulse-slow 10s ease-in-out infinite 2s;
+}
+
+/* Disable animated background */
+body:not(.animated-bg)::before,
+body:not(.animated-bg)::after {
+  animation: none;
+}
+
+/* Focus mode styling */
+.focus-mode-active header,
+.focus-mode-active nav,
+.focus-mode-active .toolbar {
+  display: none !important;
+}
+
+/* Seasonal theme overrides */
+.theme-spring {
+  --accent-violet: #86efac;
+  --accent-teal: #fcd34d;
+  --accent-pink: #f9a8d4;
+}
+
+.theme-summer {
+  --accent-violet: #38bdf8;
+  --accent-teal: #fbbf24;
+  --accent-pink: #fb923c;
+}
+
+.theme-autumn {
+  --accent-violet: #f97316;
+  --accent-teal: #eab308;
+  --accent-pink: #dc2626;
+}
+
+.theme-winter {
+  --accent-violet: #93c5fd;
+  --accent-teal: #c4b5fd;
+  --accent-pink: #e0e7ff;
+}
+
+.theme-ocean {
+  --accent-violet: #06b6d4;
+  --accent-teal: #0ea5e9;
+  --accent-pink: #22d3ee;
+}
+
+.theme-forest {
+  --accent-violet: #22c55e;
+  --accent-teal: #84cc16;
+  --accent-pink: #a3e635;
+}
+
+.theme-sunset {
+  --accent-violet: #f43f5e;
+  --accent-teal: #fb7185;
+  --accent-pink: #fda4af;
+}
+
+/* Loading animation */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Typing animation */
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+.animate-blink {
+  animation: blink 1s step-end infinite;
+}
