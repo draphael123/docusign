@@ -60,6 +60,9 @@ export default function TemplateGallery({ onSelectTemplate, isOpen, onClose }: T
   // Header skip options
   const [skipHeader, setSkipHeader] = useState(false);
   const [headerLinesToSkip, setHeaderLinesToSkip] = useState(3);
+  
+  // App header option
+  const [useAppHeader, setUseAppHeader] = useState(true);
 
   // Fetch templates from API
   const fetchTemplates = useCallback(async () => {
@@ -193,6 +196,7 @@ export default function TemplateGallery({ onSelectTemplate, isOpen, onClose }: T
     setUploadedFileName("");
     setSkipHeader(false);
     setHeaderLinesToSkip(3);
+    setUseAppHeader(true);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -400,6 +404,7 @@ export default function TemplateGallery({ onSelectTemplate, isOpen, onClose }: T
       bodyText: formBody.trim(),
       description: formDescription.trim() || `Custom ${formDocType.toLowerCase()} template`,
       category: formCategory,
+      useAppHeader: useAppHeader,
     };
 
     const success = await saveTemplate(templateData);
@@ -631,6 +636,24 @@ export default function TemplateGallery({ onSelectTemplate, isOpen, onClose }: T
                         <span className="text-xs text-[#666666]">lines to skip</span>
                       </div>
                     )}
+                  </div>
+                  
+                  {/* Use App Header Toggle */}
+                  <div className="mt-3 p-3 rounded-lg bg-[#1a1a24]/50 border border-[#2a2a3a]">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={useAppHeader}
+                        onChange={(e) => setUseAppHeader(e.target.checked)}
+                        className="w-4 h-4 rounded border-[#2a2a2a] bg-[#1a1a24] text-[#4ecdc4] focus:ring-[#4ecdc4] focus:ring-offset-0 cursor-pointer"
+                      />
+                      <div>
+                        <span className="text-sm text-[#fafafa]">Use App Header</span>
+                        <p className="text-xs text-[#666666] mt-0.5">
+                          Apply your company header image to documents using this template
+                        </p>
+                      </div>
+                    </label>
                   </div>
                 </div>
 
@@ -867,6 +890,11 @@ export default function TemplateGallery({ onSelectTemplate, isOpen, onClose }: T
                             {isLocalTemplate && (
                               <span className="text-xs px-2 py-0.5 bg-[#fbbf24]/20 text-[#fbbf24] rounded-full">
                                 💾 Local
+                              </span>
+                            )}
+                            {template.useAppHeader && (
+                              <span className="text-xs px-2 py-0.5 bg-[#4ecdc4]/20 text-[#4ecdc4] rounded-full">
+                                🖼️ Header
                               </span>
                             )}
                           </div>

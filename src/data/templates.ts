@@ -5,6 +5,7 @@ export interface DocumentTemplate {
   bodyText: string;
   description: string;
   category: string;
+  useAppHeader?: boolean; // If true, apply the app's header image to this template
 }
 
 export const documentTemplates: DocumentTemplate[] = [
