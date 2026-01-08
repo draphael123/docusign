@@ -108,6 +108,9 @@ export default function Home() {
   const [validationWarnings, setValidationWarnings] = useState<Record<string, string>>({});
   const [showValidation, setShowValidation] = useState<boolean>(false);
 
+  // DocuSign formatting
+  const [docusignMode, setDocusignMode] = useState<boolean>(false);
+
   // Celebration states
   const [showConfetti, setShowConfetti] = useState<boolean>(false);
 
@@ -1017,6 +1020,65 @@ export default function Home() {
                 }`}
                 placeholder="Enter the document content..."
               />
+              
+              {/* DocuSign Formatting Toggle */}
+              <div className="mt-3 flex items-center justify-between p-3 bg-[#242424] rounded-lg border border-[#2a2a2a]">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setDocusignMode(!docusignMode)}
+                    className={`relative w-10 h-5 rounded-full transition-colors ${
+                      docusignMode ? 'bg-[#d4a373]' : 'bg-[#3a3a3a]'
+                    }`}
+                  >
+                    <span 
+                      className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
+                        docusignMode ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                  <span className="text-sm text-[#a0a0a0]">
+                    DocuSign signature block
+                  </span>
+                </div>
+                {docusignMode && (
+                  <button
+                    onClick={() => {
+                      const signatureBlock = `
+
+
+─────────────────────────────────────────
+
+SIGNATURE
+
+Sign: ___________________________
+
+Print Name: _____________________
+
+Title: __________________________
+
+Date: ___________________________
+
+─────────────────────────────────────────`;
+                      
+                      if (!bodyText.includes('SIGNATURE')) {
+                        setBodyText(bodyText.trimEnd() + signatureBlock);
+                        toast.success('Signature block added');
+                      } else {
+                        toast('Signature block already exists', { icon: 'ℹ️' });
+                      }
+                    }}
+                    className="text-xs px-3 py-1.5 bg-[#d4a373] text-[#0f0f0f] rounded hover:bg-[#e5b888] transition-colors"
+                  >
+                    Add Signature Block
+                  </button>
+                )}
+              </div>
+              {docusignMode && (
+                <p className="mt-2 text-xs text-[#666666]">
+                  Adds a formatted signature area for DocuSign. You can also add multiple signature blocks for multiple signers.
+                </p>
+              )}
+
               {bodyText.trim() && wordCount < 20 && (
                 <p className="mt-2 text-sm text-[#f87171]">
                   Consider adding more content for a professional document.
