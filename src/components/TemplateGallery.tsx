@@ -103,53 +103,90 @@ export default function TemplateGallery({ onSelectTemplate, isOpen, onClose }: T
   // Extract text from PDF
   const extractTextFromPDF = async (file: File): Promise<string> => {
     try {
+      // Use dynamic import for pdf.js v4
       const pdfjsLib = await import("pdfjs-dist");
       
-      // Disable worker for simpler, more reliable operation
-      // @ts-ignore
-      pdfjsLib.GlobalWorkerOptions.workerSrc = "";
+      // Configure worker - using CDN for reliability
+      const PDFJS_VERSION = "4.0.379";
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VERSION}/pdf.worker.min.js`;
+      
+      console.log("PDF.js version:", PDFJS_VERSION);
+      console.log("Loading PDF file:", file.name, "Size:", file.size, "bytes");
       
       const arrayBuffer = await file.arrayBuffer();
+      console.log("ArrayBuffer created, size:", arrayBuffer.byteLength);
       
-      // Load document with useWorkerFetch disabled
+      // Load document
       const loadingTask = pdfjsLib.getDocument({ 
         data: arrayBuffer,
-        useWorkerFetch: false,
-        isEvalSupported: false,
-        useSystemFonts: true,
+        verbosity: 0, // Reduce console noise
       });
       
+      console.log("Loading task created, waiting for PDF...");
       const pdf = await loadingTask.promise;
+      console.log("PDF loaded successfully. Pages:", pdf.numPages);
+      
+      if (pdf.numPages === 0) {
+        throw new Error("PDF has no pages");
+      }
       
       let fullText = "";
+      let pagesWithText = 0;
+      
       for (let i = 1; i <= pdf.numPages; i++) {
         try {
           const page = await pdf.getPage(i);
           const textContent = await page.getTextContent();
+          
+          // Extract text items with proper spacing
           const pageText = textContent.items
-            .filter((item: any) => item.str)
+            .filter((item: any) => item.str && item.str.trim())
             .map((item: any) => item.str)
             .join(" ");
-          fullText += pageText + "\n\n";
+          
+          if (pageText.trim()) {
+            fullText += pageText + "\n\n";
+            pagesWithText++;
+          }
+          
+          console.log(`Page ${i}: ${pageText.length} characters extracted`);
         } catch (pageError) {
           console.warn(`Error reading page ${i}:`, pageError);
         }
       }
       
+      console.log(`Total extraction: ${fullText.length} characters from ${pagesWithText}/${pdf.numPages} pages`);
+      
       if (!fullText.trim()) {
-        throw new Error("No text content found");
+        throw new Error("NO_TEXT_CONTENT");
       }
       
       return fullText.trim();
     } catch (pdfJsError: any) {
-      console.error("PDF.js error:", pdfJsError);
+      console.error("PDF.js error details:", {
+        name: pdfJsError?.name,
+        message: pdfJsError?.message,
+        stack: pdfJsError?.stack?.slice(0, 500),
+      });
       
-      // Provide helpful error message
-      if (pdfJsError.message?.includes("Invalid PDF")) {
-        throw new Error("Invalid PDF file. Please make sure the file is not corrupted.");
+      // Provide specific error messages
+      if (pdfJsError.message === "NO_TEXT_CONTENT") {
+        throw new Error("This PDF appears to be image-based (scanned) and doesn't contain extractable text. Please use a text-based PDF or paste the content manually.");
       }
       
-      throw new Error("Could not read PDF. The file may be image-based (scanned) or corrupted. Try a text-based PDF or paste content manually.");
+      if (pdfJsError.message?.includes("Invalid PDF")) {
+        throw new Error("Invalid or corrupted PDF file. Please try a different file.");
+      }
+      
+      if (pdfJsError.message?.includes("Password")) {
+        throw new Error("This PDF is password protected. Please remove the password and try again.");
+      }
+      
+      if (pdfJsError.name === "MissingPDFException") {
+        throw new Error("Could not read PDF file. The file may be corrupted.");
+      }
+      
+      throw new Error(`Could not read PDF: ${pdfJsError.message || "Unknown error"}. Try a different file or paste content manually.`);
     }
   };
 
