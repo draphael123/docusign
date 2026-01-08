@@ -23,6 +23,9 @@ import StreakDisplay, { useStreak } from "@/components/StreakTracker";
 import QuickTemplates, { usePinnedTemplates } from "@/components/QuickTemplates";
 import ProfileManager, { useProfiles, SenderProfile, RecipientProfile } from "@/components/ProfileManager";
 import VersionHistory, { useVersionHistory } from "@/components/VersionHistory";
+import TemplateAnalytics, { useTemplateAnalytics } from "@/components/TemplateAnalytics";
+import { useTimeTracker, TimeTrackerDisplay, TimeStatsModal } from "@/components/TimeTracker";
+import SpellCheckPanel, { ReadabilityIndicator, useSpellCheck } from "@/components/SpellChecker";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
 import {
   saveLastUsedSettings,
@@ -140,6 +143,9 @@ export default function Home() {
   const [showProfiles, setShowProfiles] = useState<boolean>(false);
   const [showVersionHistory, setShowVersionHistory] = useState<boolean>(false);
   const [showStreaks, setShowStreaks] = useState<boolean>(false);
+  const [showTemplateAnalytics, setShowTemplateAnalytics] = useState<boolean>(false);
+  const [showTimeStats, setShowTimeStats] = useState<boolean>(false);
+  const [spellCheckEnabled, setSpellCheckEnabled] = useState<boolean>(true);
   const [appSettings, setAppSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [isOnline, setIsOnline] = useState<boolean>(true);
 
@@ -148,6 +154,16 @@ export default function Home() {
   const { pinnedIds, togglePin, isPinned } = usePinnedTemplates();
   const { saveVersion } = useVersionHistory();
   const { playSound } = useSoundEffects(appSettings.soundEffects);
+  const { recordTemplateUse } = useTemplateAnalytics();
+  const { 
+    isTracking, 
+    currentSessionSeconds, 
+    timeStats, 
+    startTracking, 
+    stopTracking, 
+    formatTime, 
+    formatMinutes 
+  } = useTimeTracker();
 
   // Initialize
   useEffect(() => {
@@ -215,6 +231,13 @@ export default function Home() {
   useEffect(() => {
     if (mounted) setHasUnsavedChanges(true);
   }, [documentType, selectedSignatory, bodyText, recipientName, recipientTitle, recipientAddress, subject, customSignatoryName, customSignatoryTitle, customSignatoryCompany, customSignatoryPhone, customSignatoryEmail, fontSize, lineSpacing, mounted]);
+
+  // Start time tracking when user starts typing
+  useEffect(() => {
+    if (mounted && bodyText && !isTracking && bodyText.length > 10) {
+      startTracking();
+    }
+  }, [bodyText, mounted, isTracking, startTracking]);
 
   // Save to undo stack when body text changes significantly
   useEffect(() => {
@@ -413,6 +436,14 @@ export default function Home() {
     setRecipientAddress(profile.address);
     playSound("success");
     toast.success(`Loaded recipient: ${profile.name}`);
+  };
+
+  // Spell check word replacement
+  const handleReplaceWord = (oldWord: string, newWord: string) => {
+    const regex = new RegExp(`\\b${oldWord}\\b`, "gi");
+    setBodyText(bodyText.replace(regex, newWord));
+    playSound("click");
+    toast.success(`Replaced "${oldWord}" with "${newWord}"`);
   };
 
   // Handlers
@@ -687,6 +718,9 @@ export default function Home() {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
+      // Stop time tracking and record
+      const timeSpent = stopTracking(documentType);
+      
       const isPrivateMode = localStorage.getItem("privateMode") === "true";
       if (!isPrivateMode) {
         saveToHistory({ documentType, signatoryName: signatory.name });
@@ -695,6 +729,9 @@ export default function Home() {
         // Record for streak tracking
         const streakAchievements = recordDocument();
         const allAchievements = [...newAchievements, ...streakAchievements];
+        
+        // Record template usage with time
+        recordTemplateUse(documentType, documentType, timeSpent);
         
         if (allAchievements.length > 0 && appSettings.confettiEnabled) {
           setShowConfetti(true);
@@ -708,7 +745,7 @@ export default function Home() {
       }
       saveLastUsedSettings({ documentType, selectedSignatory, useCustomSignatory, customSignatoryName, customSignatoryTitle, customSignatoryCompany, customSignatoryPhone, customSignatoryEmail, fontSize, lineSpacing });
       playSound("complete");
-      toast.success("PDF downloaded");
+      toast.success(`PDF downloaded${timeSpent > 0 ? ` (${timeSpent}m)` : ""}`);
     } catch (error: any) {
       playSound("error");
       toast.error(error.message || "Error generating PDF");
@@ -848,7 +885,18 @@ export default function Home() {
                 <button onClick={() => setShowStatistics(true)} className="px-3 py-1.5 text-sm text-[#60a5fa] hover:text-[#93c5fd] hover:bg-[#60a5fa]/10 rounded transition-colors">Stats</button>
                 <button onClick={() => setShowProfiles(true)} className="px-3 py-1.5 text-sm text-[#fb923c] hover:text-[#fdba74] hover:bg-[#fb923c]/10 rounded transition-colors">Profiles</button>
                 <button onClick={() => setShowVersionHistory(true)} className="px-3 py-1.5 text-sm text-[#4ade80] hover:text-[#86efac] hover:bg-[#4ade80]/10 rounded transition-colors">Versions</button>
+                <button onClick={() => setShowTemplateAnalytics(true)} className="px-3 py-1.5 text-sm text-[#c084fc] hover:text-[#d8b4fe] hover:bg-[#c084fc]/10 rounded transition-colors">📊</button>
+                <button onClick={() => setShowTimeStats(true)} className="px-3 py-1.5 text-sm text-[#22d3ee] hover:text-[#67e8f9] hover:bg-[#22d3ee]/10 rounded transition-colors">⏱️</button>
                 <div className="flex-1" />
+                {/* Time Tracker Display */}
+                {isTracking && (
+                  <TimeTrackerDisplay 
+                    currentSessionSeconds={currentSessionSeconds}
+                    isTracking={isTracking}
+                    formatTime={formatTime}
+                    compact={true}
+                  />
+                )}
                 <button onClick={() => setShowStreaks(true)} className="px-2 py-1 text-sm flex items-center gap-1 text-[#f87171] hover:bg-[#f87171]/10 rounded transition-colors" title="View streak">
                   🔥
                 </button>
@@ -1022,7 +1070,43 @@ export default function Home() {
                   </button>
                 </div>
 
-                <textarea ref={textareaRef} id="bodyText" value={bodyText} onChange={(e) => handleBodyTextChange(e.target.value)} rows={12} className={`w-full px-4 py-3 rounded-lg resize-y ${bgSecondary} border ${borderColor} ${textPrimary} ${bodyText.trim() && wordCount < 20 ? "border-[#f87171] focus:border-[#f87171]" : ""}`} placeholder="Enter the document content... Use [brackets] for placeholders." />
+                <textarea ref={textareaRef} id="bodyText" value={bodyText} onChange={(e) => handleBodyTextChange(e.target.value)} rows={12} className={`w-full px-4 py-3 rounded-lg resize-y ${bgSecondary} border ${borderColor} ${textPrimary} ${bodyText.trim() && wordCount < 20 ? "border-[#f87171] focus:border-[#f87171]" : ""}`} placeholder="Enter the document content... Use [brackets] for placeholders." spellCheck={spellCheckEnabled} />
+
+                {/* Writing Tools */}
+                {bodyText.trim() && (
+                  <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {/* Readability Score */}
+                    <ReadabilityIndicator text={bodyText} />
+                    
+                    {/* Spell Check Toggle */}
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-[#1a1a24] border border-[#2a2a3a]">
+                      <div className="flex items-center gap-2">
+                        <span className="text-white">🔍 Writing Check</span>
+                      </div>
+                      <button
+                        onClick={() => setSpellCheckEnabled(!spellCheckEnabled)}
+                        className={`w-12 h-6 rounded-full transition-colors relative ${
+                          spellCheckEnabled ? "bg-[#4ecdc4]" : "bg-[#3a3a4a]"
+                        }`}
+                      >
+                        <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
+                          spellCheckEnabled ? "left-7" : "left-1"
+                        }`} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Spell Check Panel */}
+                {bodyText.trim() && spellCheckEnabled && (
+                  <div className="mt-4">
+                    <SpellCheckPanel 
+                      text={bodyText} 
+                      enabled={spellCheckEnabled} 
+                      onReplaceWord={handleReplaceWord}
+                    />
+                  </div>
+                )}
 
                 {bodyText.trim() && wordCount < 20 && (
                   <p className="mt-2 text-sm text-[#f87171]">Consider adding more content for a professional document.</p>
@@ -1182,6 +1266,20 @@ export default function Home() {
           Offline Mode
         </div>
       )}
+      
+      {/* Template Analytics */}
+      <TemplateAnalytics 
+        isOpen={showTemplateAnalytics} 
+        onClose={() => setShowTemplateAnalytics(false)} 
+      />
+      
+      {/* Time Stats Modal */}
+      <TimeStatsModal 
+        isOpen={showTimeStats} 
+        onClose={() => setShowTimeStats(false)} 
+        timeStats={timeStats}
+        formatMinutes={formatMinutes}
+      />
       
       {/* Focus Mode Overlay */}
       {appSettings.focusMode && (
