@@ -6,6 +6,9 @@ export interface DocumentTemplate {
   description: string;
   category: string;
   useAppHeader?: boolean; // If true, apply the app's header image to this template
+  isPinned?: boolean; // If true, show in quick access
+  tags?: string[]; // Tags for filtering and organization
+  isDocuSignReady?: boolean; // If true, includes DocuSign signature placeholders
 }
 
 export const documentTemplates: DocumentTemplate[] = [

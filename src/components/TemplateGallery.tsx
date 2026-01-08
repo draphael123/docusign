@@ -61,8 +61,19 @@ export default function TemplateGallery({ onSelectTemplate, isOpen, onClose }: T
   const [skipHeader, setSkipHeader] = useState(false);
   const [headerLinesToSkip, setHeaderLinesToSkip] = useState(3);
   
+  // Footer skip options
+  const [skipFooter, setSkipFooter] = useState(false);
+  const [footerLinesToSkip, setFooterLinesToSkip] = useState(2);
+  
   // App header option
   const [useAppHeader, setUseAppHeader] = useState(true);
+  
+  // Additional options
+  const [autoDetectPlaceholders, setAutoDetectPlaceholders] = useState(true);
+  const [isPinned, setIsPinned] = useState(false);
+  const [templateTags, setTemplateTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState("");
+  const [isDocuSignReady, setIsDocuSignReady] = useState(false);
 
   // Fetch templates from API
   const fetchTemplates = useCallback(async () => {
@@ -196,7 +207,14 @@ export default function TemplateGallery({ onSelectTemplate, isOpen, onClose }: T
     setUploadedFileName("");
     setSkipHeader(false);
     setHeaderLinesToSkip(3);
+    setSkipFooter(false);
+    setFooterLinesToSkip(2);
     setUseAppHeader(true);
+    setAutoDetectPlaceholders(true);
+    setIsPinned(false);
+    setTemplateTags([]);
+    setTagInput("");
+    setIsDocuSignReady(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -359,6 +377,38 @@ export default function TemplateGallery({ onSelectTemplate, isOpen, onClose }: T
           console.log(`Skipped ${headerLinesToSkip} header lines`);
         }
       }
+      
+      // Skip footer lines if enabled
+      if (skipFooter && footerLinesToSkip > 0) {
+        const lines = extractedText.split("\n");
+        if (lines.length > footerLinesToSkip) {
+          extractedText = lines.slice(0, -footerLinesToSkip).join("\n").trim();
+          console.log(`Skipped ${footerLinesToSkip} footer lines`);
+        }
+      }
+      
+      // Auto-detect and highlight placeholders
+      if (autoDetectPlaceholders) {
+        // Find patterns like names, dates, company names and suggest as placeholders
+        const patterns = [
+          { regex: /\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}\b/gi, replacement: "[Date]" },
+          { regex: /\b\d{1,2}\/\d{1,2}\/\d{2,4}\b/g, replacement: "[Date]" },
+          { regex: /\$[\d,]+(?:\.\d{2})?/g, replacement: "[Amount]" },
+          { regex: /\b[A-Z][a-z]+\s+[A-Z][a-z]+(?:\s+(?:Jr\.|Sr\.|III|IV|II))?\b/g, replacement: "[Name]" },
+        ];
+        
+        let detectedCount = 0;
+        patterns.forEach(({ regex, replacement }) => {
+          const matches = extractedText.match(regex);
+          if (matches) {
+            detectedCount += matches.length;
+          }
+        });
+        
+        if (detectedCount > 0) {
+          console.log(`Auto-detected ${detectedCount} potential placeholders`);
+        }
+      }
 
       // Set form values
       setFormBody(extractedText);
@@ -405,6 +455,9 @@ export default function TemplateGallery({ onSelectTemplate, isOpen, onClose }: T
       description: formDescription.trim() || `Custom ${formDocType.toLowerCase()} template`,
       category: formCategory,
       useAppHeader: useAppHeader,
+      isPinned: isPinned,
+      tags: templateTags,
+      isDocuSignReady: isDocuSignReady,
     };
 
     const success = await saveTemplate(templateData);
@@ -638,22 +691,174 @@ export default function TemplateGallery({ onSelectTemplate, isOpen, onClose }: T
                     )}
                   </div>
                   
-                  {/* Use App Header Toggle */}
-                  <div className="mt-3 p-3 rounded-lg bg-[#1a1a24]/50 border border-[#2a2a3a]">
-                    <label className="flex items-center gap-3 cursor-pointer">
+                  {/* Skip Footer Toggle */}
+                  <div className="mt-3 flex items-center gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
                       <input
                         type="checkbox"
-                        checked={useAppHeader}
-                        onChange={(e) => setUseAppHeader(e.target.checked)}
-                        className="w-4 h-4 rounded border-[#2a2a2a] bg-[#1a1a24] text-[#4ecdc4] focus:ring-[#4ecdc4] focus:ring-offset-0 cursor-pointer"
+                        checked={skipFooter}
+                        onChange={(e) => setSkipFooter(e.target.checked)}
+                        className="w-4 h-4 rounded border-[#2a2a2a] bg-[#1a1a24] text-[#f472b6] focus:ring-[#f472b6] focus:ring-offset-0 cursor-pointer"
                       />
-                      <div>
-                        <span className="text-sm text-[#fafafa]">Use App Header</span>
-                        <p className="text-xs text-[#666666] mt-0.5">
-                          Apply your company header image to documents using this template
-                        </p>
-                      </div>
+                      <span className="text-sm text-[#a0a0a0]">Skip footer lines</span>
                     </label>
+                    {skipFooter && (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min="1"
+                          max="10"
+                          value={footerLinesToSkip}
+                          onChange={(e) => setFooterLinesToSkip(Math.max(1, Math.min(10, parseInt(e.target.value) || 1)))}
+                          className="w-16 px-2 py-1 text-sm rounded bg-[#1a1a24] border border-[#2a2a2a] text-[#fafafa] focus:border-[#f472b6] focus:outline-none"
+                        />
+                        <span className="text-xs text-[#666666]">lines to skip</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Template Options Grid */}
+                  <div className="mt-4 grid grid-cols-2 gap-3">
+                    {/* Use App Header */}
+                    <div className="p-3 rounded-lg bg-[#1a1a24]/50 border border-[#2a2a3a] hover:border-[#4ecdc4]/50 transition-colors">
+                      <label className="flex items-start gap-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={useAppHeader}
+                          onChange={(e) => setUseAppHeader(e.target.checked)}
+                          className="w-4 h-4 mt-0.5 rounded border-[#2a2a2a] bg-[#1a1a24] text-[#4ecdc4] focus:ring-[#4ecdc4] focus:ring-offset-0 cursor-pointer"
+                        />
+                        <div>
+                          <span className="text-sm text-[#fafafa]">🖼️ Use App Header</span>
+                          <p className="text-xs text-[#666666] mt-0.5">
+                            Apply company header image
+                          </p>
+                        </div>
+                      </label>
+                    </div>
+                    
+                    {/* DocuSign Ready */}
+                    <div className="p-3 rounded-lg bg-[#1a1a24]/50 border border-[#2a2a3a] hover:border-[#a78bfa]/50 transition-colors">
+                      <label className="flex items-start gap-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={isDocuSignReady}
+                          onChange={(e) => setIsDocuSignReady(e.target.checked)}
+                          className="w-4 h-4 mt-0.5 rounded border-[#2a2a2a] bg-[#1a1a24] text-[#a78bfa] focus:ring-[#a78bfa] focus:ring-offset-0 cursor-pointer"
+                        />
+                        <div>
+                          <span className="text-sm text-[#fafafa]">✍️ DocuSign Ready</span>
+                          <p className="text-xs text-[#666666] mt-0.5">
+                            Include signature placeholders
+                          </p>
+                        </div>
+                      </label>
+                    </div>
+                    
+                    {/* Auto-detect Placeholders */}
+                    <div className="p-3 rounded-lg bg-[#1a1a24]/50 border border-[#2a2a3a] hover:border-[#f0b866]/50 transition-colors">
+                      <label className="flex items-start gap-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={autoDetectPlaceholders}
+                          onChange={(e) => setAutoDetectPlaceholders(e.target.checked)}
+                          className="w-4 h-4 mt-0.5 rounded border-[#2a2a2a] bg-[#1a1a24] text-[#f0b866] focus:ring-[#f0b866] focus:ring-offset-0 cursor-pointer"
+                        />
+                        <div>
+                          <span className="text-sm text-[#fafafa]">🔍 Auto-detect</span>
+                          <p className="text-xs text-[#666666] mt-0.5">
+                            Find dates, names, amounts
+                          </p>
+                        </div>
+                      </label>
+                    </div>
+                    
+                    {/* Pin Template */}
+                    <div className="p-3 rounded-lg bg-[#1a1a24]/50 border border-[#2a2a3a] hover:border-[#f87171]/50 transition-colors">
+                      <label className="flex items-start gap-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={isPinned}
+                          onChange={(e) => setIsPinned(e.target.checked)}
+                          className="w-4 h-4 mt-0.5 rounded border-[#2a2a2a] bg-[#1a1a24] text-[#f87171] focus:ring-[#f87171] focus:ring-offset-0 cursor-pointer"
+                        />
+                        <div>
+                          <span className="text-sm text-[#fafafa]">📌 Pin Template</span>
+                          <p className="text-xs text-[#666666] mt-0.5">
+                            Show in quick access
+                          </p>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+                  
+                  {/* Tags Input */}
+                  <div className="mt-4">
+                    <label className="block text-sm text-[#666666] mb-2">🏷️ Tags (for organization)</label>
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {templateTags.map((tag, index) => (
+                        <span 
+                          key={index} 
+                          className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full bg-[#a78bfa]/20 text-[#a78bfa]"
+                        >
+                          {tag}
+                          <button
+                            type="button"
+                            onClick={() => setTemplateTags(templateTags.filter((_, i) => i !== index))}
+                            className="hover:text-[#f87171] transition-colors"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={tagInput}
+                        onChange={(e) => setTagInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && tagInput.trim()) {
+                            e.preventDefault();
+                            if (!templateTags.includes(tagInput.trim().toLowerCase())) {
+                              setTemplateTags([...templateTags, tagInput.trim().toLowerCase()]);
+                            }
+                            setTagInput("");
+                          }
+                        }}
+                        placeholder="Add tag and press Enter"
+                        className="flex-1 px-3 py-1.5 text-sm rounded bg-[#1a1a24] border border-[#2a2a2a] text-[#fafafa] placeholder-[#666666] focus:border-[#a78bfa] focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (tagInput.trim() && !templateTags.includes(tagInput.trim().toLowerCase())) {
+                            setTemplateTags([...templateTags, tagInput.trim().toLowerCase()]);
+                            setTagInput("");
+                          }
+                        }}
+                        className="px-3 py-1.5 text-sm rounded bg-[#2a2a3a] text-[#a0a0a0] hover:bg-[#3a3a4a] hover:text-[#fafafa] transition-colors"
+                      >
+                        Add
+                      </button>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {["contract", "hr", "legal", "sales", "onboarding", "finance"].map((suggestion) => (
+                        <button
+                          key={suggestion}
+                          type="button"
+                          onClick={() => {
+                            if (!templateTags.includes(suggestion)) {
+                              setTemplateTags([...templateTags, suggestion]);
+                            }
+                          }}
+                          disabled={templateTags.includes(suggestion)}
+                          className="px-2 py-0.5 text-xs rounded bg-[#2a2a3a]/50 text-[#666666] hover:bg-[#2a2a3a] hover:text-[#a0a0a0] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          + {suggestion}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
@@ -874,9 +1079,23 @@ export default function TemplateGallery({ onSelectTemplate, isOpen, onClose }: T
                             </button>
                           )}
                         </div>
-                        <p className="text-sm text-[#666666] mb-3 line-clamp-2">
+                        <p className="text-sm text-[#666666] mb-2 line-clamp-2">
                           {template.description}
                         </p>
+                        {template.tags && template.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mb-2">
+                            {template.tags.slice(0, 3).map((tag, idx) => (
+                              <span key={idx} className="text-[10px] px-1.5 py-0.5 rounded bg-[#2a2a3a] text-[#888]">
+                                {tag}
+                              </span>
+                            ))}
+                            {template.tags.length > 3 && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#2a2a3a] text-[#666]">
+                                +{template.tags.length - 3}
+                              </span>
+                            )}
+                          </div>
+                        )}
                         <div className="flex items-center justify-between">
                           <div className="flex gap-2">
                             <span className="text-xs px-2 py-0.5 bg-[#a78bfa]/20 text-[#a78bfa] rounded-full">
@@ -895,6 +1114,16 @@ export default function TemplateGallery({ onSelectTemplate, isOpen, onClose }: T
                             {template.useAppHeader && (
                               <span className="text-xs px-2 py-0.5 bg-[#4ecdc4]/20 text-[#4ecdc4] rounded-full">
                                 🖼️ Header
+                              </span>
+                            )}
+                            {template.isDocuSignReady && (
+                              <span className="text-xs px-2 py-0.5 bg-[#a78bfa]/20 text-[#a78bfa] rounded-full">
+                                ✍️ Sign
+                              </span>
+                            )}
+                            {template.isPinned && (
+                              <span className="text-xs px-2 py-0.5 bg-[#f87171]/20 text-[#f87171] rounded-full">
+                                📌
                               </span>
                             )}
                           </div>
