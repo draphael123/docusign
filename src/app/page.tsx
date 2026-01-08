@@ -55,6 +55,50 @@ import APIAccess from "@/components/APIAccess";
 import LanguageSelector, { useLanguage, LanguageProvider } from "@/components/LanguageSelector";
 import DocumentExpiration from "@/components/DocumentExpiration";
 import AutoSaveIndicator from "@/components/AutoSaveIndicator";
+import Sidebar, { SidebarIcons } from "@/components/Sidebar";
+import Card, { CardHeader, StatsCard } from "@/components/Card";
+import Button, { IconButton, ButtonGroup } from "@/components/Button";
+import { Skeleton, FormSectionSkeleton } from "@/components/Skeleton";
+import {
+  FileText,
+  Star,
+  History,
+  BarChart3,
+  Users,
+  GitBranch,
+  Package,
+  Bot,
+  Palette,
+  Calendar,
+  Settings,
+  Flame,
+  Clock,
+  Eye,
+  Save,
+  Trash2,
+  HelpCircle,
+  Keyboard,
+  Link as LinkIcon,
+  Key,
+  Shield,
+  Download,
+  FileDown,
+  Copy,
+  Undo2,
+  CalendarDays,
+  Minus,
+  PenLine,
+  Search,
+  MoreHorizontal,
+  Sun,
+  Moon,
+  ChevronRight,
+  Sparkles,
+  Timer,
+  Zap,
+  Globe,
+  X,
+} from "lucide-react";
 
 const documentTypes = [
   "Letter of Recommendation",
@@ -189,6 +233,8 @@ export default function Home() {
   const [showExpiration, setShowExpiration] = useState<boolean>(false);
   const [documentTags, setDocumentTags] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // Hooks for new features
   const { recordDocument } = useStreak();
@@ -216,7 +262,16 @@ export default function Home() {
   // Initialize
   useEffect(() => {
     setMounted(true);
+    // Simulate initial load
+    setTimeout(() => setIsLoading(false), 500);
+    
     if (typeof window !== "undefined") {
+      // Load sidebar state
+      const savedSidebar = localStorage.getItem("sidebarOpen");
+      if (savedSidebar !== null) {
+        setSidebarOpen(savedSidebar === "true");
+      }
+      
       // Load theme
       const savedTheme = localStorage.getItem("theme") as "dark" | "light" | null;
       if (savedTheme) {
@@ -449,6 +504,59 @@ export default function Home() {
     localStorage.setItem("theme", newTheme);
     document.documentElement.classList.toggle("light", newTheme === "light");
   };
+
+  // Sidebar toggle
+  const toggleSidebar = () => {
+    const newState = !sidebarOpen;
+    setSidebarOpen(newState);
+    localStorage.setItem("sidebarOpen", String(newState));
+  };
+
+  // Sidebar sections config
+  const sidebarSections = [
+    {
+      title: "Create",
+      items: [
+        { id: "templates", icon: <FileText className="w-5 h-5" />, label: "Templates", color: "#8b5cf6", onClick: () => setShowTemplateGallery(true) },
+        { id: "favorites", icon: <Star className="w-5 h-5" />, label: "Favorites", color: "#f59e0b", onClick: () => setShowFavorites(true) },
+        { id: "bulk", icon: <Package className="w-5 h-5" />, label: "Bulk Generate", color: "#2dd4bf", onClick: () => setShowBulkGeneration(true) },
+        { id: "ai", icon: <Sparkles className="w-5 h-5" />, label: "AI Assistant", color: "#8b5cf6", onClick: () => setShowAIAssistant(true) },
+      ],
+    },
+    {
+      title: "History",
+      items: [
+        { id: "history", icon: <History className="w-5 h-5" />, label: "History", color: "#2dd4bf", onClick: () => setShowHistory(true) },
+        { id: "versions", icon: <GitBranch className="w-5 h-5" />, label: "Versions", color: "#22c55e", onClick: () => setShowVersionHistory(true) },
+        { id: "exports", icon: <FileDown className="w-5 h-5" />, label: "Exports", color: "#3b82f6", onClick: () => setShowExportHistory(true) },
+      ],
+    },
+    {
+      title: "Analytics",
+      items: [
+        { id: "stats", icon: <BarChart3 className="w-5 h-5" />, label: "Statistics", color: "#3b82f6", onClick: () => setShowStatistics(true) },
+        { id: "analytics", icon: <Zap className="w-5 h-5" />, label: "Template Analytics", color: "#a855f7", onClick: () => setShowTemplateAnalytics(true) },
+        { id: "time", icon: <Timer className="w-5 h-5" />, label: "Time Tracking", color: "#06b6d4", onClick: () => setShowTimeStats(true) },
+      ],
+    },
+    {
+      title: "Customize",
+      items: [
+        { id: "themes", icon: <Palette className="w-5 h-5" />, label: "PDF Themes", color: "#ec4899", onClick: () => setShowPDFThemes(true) },
+        { id: "branding", icon: <Globe className="w-5 h-5" />, label: "Branding", color: "#f59e0b", onClick: () => setShowBranding(true) },
+        { id: "profiles", icon: <Users className="w-5 h-5" />, label: "Profiles", color: "#f97316", onClick: () => setShowProfiles(true) },
+      ],
+    },
+    {
+      title: "Advanced",
+      items: [
+        { id: "schedule", icon: <Calendar className="w-5 h-5" />, label: "Schedule", color: "#f43f5e", onClick: () => setShowScheduling(true) },
+        { id: "teams", icon: <Users className="w-5 h-5" />, label: "Teams", color: "#8b5cf6", onClick: () => setShowTeamWorkspaces(true) },
+        { id: "webhooks", icon: <LinkIcon className="w-5 h-5" />, label: "Webhooks", color: "#2dd4bf", onClick: () => setShowWebhooks(true) },
+        { id: "api", icon: <Key className="w-5 h-5" />, label: "API Access", color: "#3b82f6", onClick: () => setShowAPIAccess(true) },
+      ],
+    },
+  ];
 
   // Settings handler
   const handleSettingsChange = (newSettings: AppSettings) => {
@@ -900,22 +1008,40 @@ export default function Home() {
   return (
     <>
       <SkipToContent />
-      <Toaster position="bottom-right" toastOptions={{ style: { background: theme === "light" ? "#fff" : "#1a1a24", color: theme === "light" ? "#1a1a2e" : "#fafafa", border: `1px solid ${theme === "light" ? "#e0e0ee" : "#2a2a3a"}`, boxShadow: '0 4px 20px rgba(167, 139, 250, 0.15)' } }} />
+      <Toaster position="bottom-right" toastOptions={{ 
+        style: { 
+          background: theme === "light" ? "#fff" : "#18181b", 
+          color: theme === "light" ? "#09090b" : "#fafafa", 
+          border: `1px solid ${theme === "light" ? "#e4e4e7" : "#27272a"}`, 
+          borderRadius: '12px',
+          boxShadow: '0 10px 40px rgba(0, 0, 0, 0.3)' 
+        } 
+      }} />
 
-      <div className={`min-h-screen ${bgPrimary} transition-colors ${appSettings.compactMode ? "compact-mode" : ""}`}>
-        <main id="main-content" className={`${appSettings.compactMode ? "py-4 px-3" : "py-8 px-4 sm:px-6 lg:px-8"} ${showLivePreview ? "lg:pr-[420px]" : ""}`} role="main" tabIndex={-1}>
-          <div className={`${appSettings.compactMode ? "max-w-2xl" : "max-w-3xl"} mx-auto animate-fade-in`}>
+      {/* Sidebar */}
+      {mounted && !appSettings.focusMode && (
+        <Sidebar 
+          sections={sidebarSections} 
+          isOpen={sidebarOpen} 
+          onToggle={toggleSidebar}
+          theme={theme}
+        />
+      )}
+
+      <div className={`min-h-screen transition-all duration-300 ${appSettings.compactMode ? "compact-mode" : ""} ${sidebarOpen && !appSettings.focusMode ? "ml-64" : !appSettings.focusMode ? "ml-16" : ""}`}>
+        <main id="main-content" className={`${appSettings.compactMode ? "py-4 px-4" : "py-8 px-6 lg:px-8"} ${showLivePreview ? "lg:pr-[420px]" : ""}`} role="main" tabIndex={-1}>
+          <div className={`${appSettings.compactMode ? "max-w-2xl" : "max-w-4xl"} mx-auto`}>
             {/* Header */}
             {!appSettings.focusMode && (
-            <header className={appSettings.compactMode ? "mb-4" : "mb-8"}>
+            <header className={`${appSettings.compactMode ? "mb-4" : "mb-8"} animate-fade-in`}>
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h1 className={`${appSettings.compactMode ? "text-2xl" : "text-3xl sm:text-4xl"} mb-1 gradient-text`} style={{ fontFamily: "'Crimson Pro', serif" }}>
+                  <h1 className={`${appSettings.compactMode ? "text-2xl" : "text-3xl sm:text-4xl"} font-semibold mb-1 text-gradient-primary`}>
                     Document Generator
                   </h1>
-                  <p className={`text-sm ${textMuted}`}>Create professional PDF documents for DocuSign</p>
+                  <p className={`text-sm text-gray-500`}>Create professional PDF documents for DocuSign</p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                   {mounted && (
                     <AutoSaveIndicator lastSaved={lastSaved} isSaving={isSaving} hasChanges={hasUnsavedChanges} />
                   )}
@@ -923,49 +1049,89 @@ export default function Home() {
                     <LanguageSelector compact />
                   )}
                   {mounted && (
-                    <button onClick={toggleTheme} className={`p-2 rounded-lg border-2 transition-all hover:shadow-lg ${theme === "dark" ? "border-[#f0b866] hover:bg-[#f0b866]/10 hover:shadow-[#f0b866]/20" : "border-[#a78bfa] hover:bg-[#a78bfa]/10 hover:shadow-[#a78bfa]/20"}`} title="Toggle theme">
-                      {theme === "dark" ? "☀️" : "🌙"}
-                    </button>
+                    <IconButton 
+                      icon={theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                      onClick={toggleTheme}
+                      variant="secondary"
+                      tooltip={theme === "dark" ? "Light mode" : "Dark mode"}
+                    />
+                  )}
+                  {mounted && (
+                    <IconButton 
+                      icon={<Settings className="w-5 h-5" />}
+                      onClick={() => setShowSettings(true)}
+                      variant="ghost"
+                      tooltip="Settings"
+                    />
                   )}
                 </div>
               </div>
 
-              {/* Toolbar */}
-              <nav className={`flex flex-wrap gap-2 pb-4 border-b ${borderColor}`}>
-                <button onClick={() => setShowTemplateGallery(true)} className="px-3 py-1.5 text-sm text-[#a78bfa] hover:text-[#c4b5fd] hover:bg-[#a78bfa]/10 rounded transition-colors">Templates</button>
-                <button onClick={() => setShowFavorites(true)} className="px-3 py-1.5 text-sm text-[#f472b6] hover:text-[#f9a8d4] hover:bg-[#f472b6]/10 rounded transition-colors">Favorites</button>
-                <button onClick={() => setShowHistory(true)} className="px-3 py-1.5 text-sm text-[#4ecdc4] hover:text-[#7eddd6] hover:bg-[#4ecdc4]/10 rounded transition-colors">History</button>
-                <button onClick={() => setShowStatistics(true)} className="px-3 py-1.5 text-sm text-[#60a5fa] hover:text-[#93c5fd] hover:bg-[#60a5fa]/10 rounded transition-colors">Stats</button>
-                <button onClick={() => setShowProfiles(true)} className="px-3 py-1.5 text-sm text-[#fb923c] hover:text-[#fdba74] hover:bg-[#fb923c]/10 rounded transition-colors">Profiles</button>
-                <button onClick={() => setShowVersionHistory(true)} className="px-3 py-1.5 text-sm text-[#4ade80] hover:text-[#86efac] hover:bg-[#4ade80]/10 rounded transition-colors">Versions</button>
-                {/* New Feature Buttons */}
-                <button onClick={() => setShowBulkGeneration(true)} className="px-3 py-1.5 text-sm text-[#fbbf24] hover:text-[#fcd34d] hover:bg-[#fbbf24]/10 rounded transition-colors" title="Bulk Generate">📦</button>
-                <button onClick={() => setShowAIAssistant(true)} className="px-3 py-1.5 text-sm text-[#a78bfa] hover:text-[#c4b5fd] hover:bg-[#a78bfa]/10 rounded transition-colors" title="AI Assistant">🤖</button>
-                <button onClick={() => setShowPDFThemes(true)} className="px-3 py-1.5 text-sm text-[#f472b6] hover:text-[#f9a8d4] hover:bg-[#f472b6]/10 rounded transition-colors" title="PDF Themes">🎨</button>
-                <button onClick={() => setShowTemplateAnalytics(true)} className="px-3 py-1.5 text-sm text-[#c084fc] hover:text-[#d8b4fe] hover:bg-[#c084fc]/10 rounded transition-colors" title="Analytics">📊</button>
-                <button onClick={() => setShowTimeStats(true)} className="px-3 py-1.5 text-sm text-[#22d3ee] hover:text-[#67e8f9] hover:bg-[#22d3ee]/10 rounded transition-colors" title="Time Tracker">⏱️</button>
-                <button onClick={() => setShowScheduling(true)} className="px-3 py-1.5 text-sm text-[#fb7185] hover:text-[#fda4af] hover:bg-[#fb7185]/10 rounded transition-colors" title="Schedule">📅</button>
-                <div className="flex-1" />
+              {/* Quick Action Bar */}
+              <div className={`flex flex-wrap items-center gap-3 pb-4 border-b border-[--border-default]`}>
                 {/* Time Tracker Display */}
                 {isTracking && (
-                  <TimeTrackerDisplay 
-                    currentSessionSeconds={currentSessionSeconds}
-                    isTracking={isTracking}
-                    formatTime={formatTime}
-                    compact={true}
-                  />
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-violet-500/10 border border-violet-500/30">
+                    <Timer className="w-4 h-4 text-violet-400" />
+                    <TimeTrackerDisplay 
+                      currentSessionSeconds={currentSessionSeconds}
+                      isTracking={isTracking}
+                      formatTime={formatTime}
+                      compact={true}
+                    />
+                  </div>
                 )}
-                <button onClick={() => setShowStreaks(true)} className="px-2 py-1 text-sm flex items-center gap-1 text-[#f87171] hover:bg-[#f87171]/10 rounded transition-colors" title="View streak">
-                  🔥
-                </button>
-                <button onClick={() => setShowLivePreview(!showLivePreview)} className={`px-3 py-1.5 text-sm rounded transition-all ${showLivePreview ? "bg-gradient-to-r from-[#a78bfa] to-[#4ecdc4] text-white shadow-lg shadow-[#a78bfa]/25" : "text-[#f0b866] hover:text-[#f5c97a] hover:bg-[#f0b866]/10"}`}>
-                  {showLivePreview ? "Hide Preview" : "Live Preview"}
-                </button>
-                <button onClick={handleSaveDraft} className={`px-3 py-1.5 text-sm ${textSecondary} hover:text-[#4ade80] hover:bg-[#4ade80]/10 rounded transition-colors`} title="Ctrl+S">Save</button>
-                <button onClick={handleLoadDraft} className={`px-3 py-1.5 text-sm ${textSecondary} hover:text-[#60a5fa] hover:bg-[#60a5fa]/10 rounded transition-colors`}>Load</button>
-                <button onClick={handleClearDraft} className={`px-3 py-1.5 text-sm ${textSecondary} hover:text-[#ff7a7a] hover:bg-[#ff7a7a]/10 rounded transition-colors`}>Clear</button>
-                <button onClick={() => setShowSettings(true)} className="px-2 py-1.5 text-sm text-[#a0a0a0] hover:text-white hover:bg-[#2a2a3a] rounded transition-colors" title="Settings">⚙️</button>
-              </nav>
+                
+                <div className="flex-1" />
+                
+                <ButtonGroup>
+                  <IconButton 
+                    icon={<Flame className="w-5 h-5" />}
+                    onClick={() => setShowStreaks(true)}
+                    variant="ghost"
+                    tooltip="View streak"
+                  />
+                  <IconButton 
+                    icon={<Eye className="w-5 h-5" />}
+                    onClick={() => setShowLivePreview(!showLivePreview)}
+                    variant={showLivePreview ? "primary" : "ghost"}
+                    tooltip={showLivePreview ? "Hide preview" : "Live preview"}
+                  />
+                  <IconButton 
+                    icon={<Search className="w-5 h-5" />}
+                    onClick={() => setShowFindReplace(true)}
+                    variant="ghost"
+                    tooltip="Find & Replace (Ctrl+F)"
+                  />
+                  <IconButton 
+                    icon={<Keyboard className="w-5 h-5" />}
+                    onClick={() => setShowKeyboardShortcuts(true)}
+                    variant="ghost"
+                    tooltip="Keyboard shortcuts"
+                  />
+                </ButtonGroup>
+
+                <div className="h-6 w-px bg-[--border-default]" />
+                
+                <ButtonGroup>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    icon={<Save className="w-4 h-4" />}
+                    onClick={handleSaveDraft}
+                  >
+                    Save
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    icon={<Trash2 className="w-4 h-4" />}
+                    onClick={handleClearDraft}
+                  >
+                    Clear
+                  </Button>
+                </ButtonGroup>
+              </div>
 
               {/* Recently Used */}
               {recentDocTypes.length > 1 && !appSettings.focusMode && (
