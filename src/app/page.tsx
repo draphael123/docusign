@@ -157,6 +157,45 @@ export default function Home() {
     mounted,
   ]);
 
+  const handleAutoSave = useCallback(() => {
+    const draft: DraftData = {
+      documentType,
+      selectedSignatory,
+      bodyText,
+      recipientName,
+      recipientTitle,
+      recipientAddress,
+      subject,
+      customSignatoryName,
+      customSignatoryTitle,
+      customSignatoryCompany,
+      customSignatoryPhone,
+      customSignatoryEmail,
+      fontSize,
+      lineSpacing,
+    };
+    localStorage.setItem("documentDraft", JSON.stringify(draft));
+    const now = new Date();
+    localStorage.setItem("lastSaved", now.toISOString());
+    setLastSaved(now);
+    setHasUnsavedChanges(false);
+  }, [
+    documentType,
+    selectedSignatory,
+    bodyText,
+    recipientName,
+    recipientTitle,
+    recipientAddress,
+    subject,
+    customSignatoryName,
+    customSignatoryTitle,
+    customSignatoryCompany,
+    customSignatoryPhone,
+    customSignatoryEmail,
+    fontSize,
+    lineSpacing,
+  ]);
+
   // Auto-save every 30 seconds
   useEffect(() => {
     if (!mounted || !autoSaveEnabled) return;
@@ -291,45 +330,6 @@ export default function Home() {
       lineSpacing,
     };
     localStorage.setItem("documentDraft", JSON.stringify(draft));
-  }, [
-    documentType,
-    selectedSignatory,
-    bodyText,
-    recipientName,
-    recipientTitle,
-    recipientAddress,
-    subject,
-    customSignatoryName,
-    customSignatoryTitle,
-    customSignatoryCompany,
-    customSignatoryPhone,
-    customSignatoryEmail,
-    fontSize,
-    lineSpacing,
-  ]);
-
-  const handleAutoSave = useCallback(() => {
-    const draft: DraftData = {
-      documentType,
-      selectedSignatory,
-      bodyText,
-      recipientName,
-      recipientTitle,
-      recipientAddress,
-      subject,
-      customSignatoryName,
-      customSignatoryTitle,
-      customSignatoryCompany,
-      customSignatoryPhone,
-      customSignatoryEmail,
-      fontSize,
-      lineSpacing,
-    };
-    localStorage.setItem("documentDraft", JSON.stringify(draft));
-    const now = new Date();
-    localStorage.setItem("lastSaved", now.toISOString());
-    setLastSaved(now);
-    setHasUnsavedChanges(false);
   }, [
     documentType,
     selectedSignatory,
