@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { documentTemplates, DocumentTemplate } from "@/data/templates";
 
 interface TemplateGalleryProps {
@@ -9,7 +9,7 @@ interface TemplateGalleryProps {
   onClose: () => void;
 }
 
-const STORAGE_KEY = "userTemplates";
+const LOCAL_STORAGE_KEY = "userTemplates_local_backup";
 
 const documentTypes = [
   "Letter of Recommendation",
@@ -37,6 +37,9 @@ export default function TemplateGallery({ onSelectTemplate, isOpen, onClose }: T
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [activeTab, setActiveTab] = useState<"all" | "builtin" | "custom">("all");
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [storageMode, setStorageMode] = useState<"cloud" | "local">("cloud");
   
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
@@ -58,24 +61,126 @@ export default function TemplateGallery({ onSelectTemplate, isOpen, onClose }: T
   const [skipHeader, setSkipHeader] = useState(false);
   const [headerLinesToSkip, setHeaderLinesToSkip] = useState(3);
 
-  // Load user templates from localStorage
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem(STORAGE_KEY);
+  // Fetch templates from API
+  const fetchTemplates = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch("/api/templates");
+      const data = await response.json();
+      
+      if (data.templates && data.templates.length > 0) {
+        setUserTemplates(data.templates);
+        setStorageMode("cloud");
+        // Also save to localStorage as backup
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data.templates));
+      } else if (data.source === "fallback") {
+        // KV not configured, use localStorage
+        setStorageMode("local");
+        const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
+        if (stored) {
+          setUserTemplates(JSON.parse(stored));
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching templates:", error);
+      // Fallback to localStorage
+      setStorageMode("local");
+      const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (stored) {
         try {
           setUserTemplates(JSON.parse(stored));
         } catch (e) {
-          console.error("Error loading user templates:", e);
+          console.error("Error loading local templates:", e);
         }
       }
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
-  // Save user templates to localStorage
-  const saveUserTemplates = (templates: DocumentTemplate[]) => {
-    setUserTemplates(templates);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(templates));
+  // Load templates on mount
+  useEffect(() => {
+    fetchTemplates();
+  }, [fetchTemplates]);
+
+  // Save template to API or localStorage
+  const saveTemplate = async (template: Omit<DocumentTemplate, "id">): Promise<boolean> => {
+    setIsSaving(true);
+    try {
+      const response = await fetch("/api/templates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ template }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success && data.template) {
+        // Add to local state
+        const newTemplates = [...userTemplates, data.template];
+        setUserTemplates(newTemplates);
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(newTemplates));
+        setStorageMode("cloud");
+        return true;
+      } else if (response.status === 503) {
+        // Storage not configured, save locally only
+        const localTemplate: DocumentTemplate = {
+          ...template,
+          id: `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        };
+        const newTemplates = [...userTemplates, localTemplate];
+        setUserTemplates(newTemplates);
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(newTemplates));
+        setStorageMode("local");
+        return true;
+      }
+      
+      throw new Error(data.error || "Failed to save template");
+    } catch (error) {
+      console.error("Error saving template:", error);
+      // Fallback: save locally
+      const localTemplate: DocumentTemplate = {
+        ...template,
+        id: `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      };
+      const newTemplates = [...userTemplates, localTemplate];
+      setUserTemplates(newTemplates);
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(newTemplates));
+      setStorageMode("local");
+      return true;
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Delete template from API or localStorage
+  const deleteTemplate = async (templateId: string): Promise<boolean> => {
+    try {
+      // Only call API for cloud-stored templates
+      if (templateId.startsWith("shared-")) {
+        const response = await fetch(`/api/templates?id=${templateId}`, {
+          method: "DELETE",
+        });
+        
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.error || "Failed to delete template");
+        }
+      }
+      
+      // Update local state
+      const newTemplates = userTemplates.filter((t) => t.id !== templateId);
+      setUserTemplates(newTemplates);
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(newTemplates));
+      return true;
+    } catch (error) {
+      console.error("Error deleting template:", error);
+      // Still remove from local state
+      const newTemplates = userTemplates.filter((t) => t.id !== templateId);
+      setUserTemplates(newTemplates);
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(newTemplates));
+      return true;
+    }
   };
 
   const resetForm = () => {
@@ -274,7 +379,7 @@ export default function TemplateGallery({ onSelectTemplate, isOpen, onClose }: T
     }
   };
 
-  const handleCreateTemplate = () => {
+  const handleCreateTemplate = async () => {
     // Validation
     if (!formName.trim()) {
       setFormError("Template name is required");
@@ -289,8 +394,7 @@ export default function TemplateGallery({ onSelectTemplate, isOpen, onClose }: T
       return;
     }
 
-    const newTemplate: DocumentTemplate = {
-      id: `user-${Date.now()}`,
+    const templateData = {
       name: formName.trim(),
       documentType: formDocType,
       bodyText: formBody.trim(),
@@ -298,14 +402,17 @@ export default function TemplateGallery({ onSelectTemplate, isOpen, onClose }: T
       category: formCategory,
     };
 
-    saveUserTemplates([...userTemplates, newTemplate]);
-    resetForm();
-    setShowCreateForm(false);
+    const success = await saveTemplate(templateData);
+    if (success) {
+      resetForm();
+      setShowCreateForm(false);
+    } else {
+      setFormError("Failed to save template. Please try again.");
+    }
   };
 
-  const handleDeleteTemplate = (id: string) => {
-    const updated = userTemplates.filter((t) => t.id !== id);
-    saveUserTemplates(updated);
+  const handleDeleteTemplate = async (id: string) => {
+    await deleteTemplate(id);
     setDeleteConfirm(null);
   };
 
@@ -366,44 +473,55 @@ export default function TemplateGallery({ onSelectTemplate, isOpen, onClose }: T
 
         {/* Tabs and Actions */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-[#2a2a2a]">
-          <div className="flex gap-1">
-            <button
-              onClick={() => setActiveTab("all")}
-              className={`px-3 py-1.5 text-sm rounded-lg transition-all ${
-                activeTab === "all"
-                  ? "bg-gradient-to-r from-[#a78bfa] to-[#f472b6] text-white shadow-lg shadow-[#a78bfa]/25"
-                  : "text-[#666680] hover:text-[#a78bfa] hover:bg-[#a78bfa]/10"
-              }`}
-            >
-              All ({documentTemplates.length + userTemplates.length})
-            </button>
-            <button
-              onClick={() => setActiveTab("builtin")}
-              className={`px-3 py-1.5 text-sm rounded-lg transition-all ${
-                activeTab === "builtin"
-                  ? "bg-[#4ecdc4] text-[#0a0a12] shadow-lg shadow-[#4ecdc4]/25"
-                  : "text-[#666680] hover:text-[#4ecdc4] hover:bg-[#4ecdc4]/10"
-              }`}
-            >
-              Built-in ({documentTemplates.length})
-            </button>
-            <button
-              onClick={() => setActiveTab("custom")}
-              className={`px-3 py-1.5 text-sm rounded-lg transition-all ${
-                activeTab === "custom"
-                  ? "bg-[#f0b866] text-[#0a0a12] shadow-lg shadow-[#f0b866]/25"
-                  : "text-[#666680] hover:text-[#f0b866] hover:bg-[#f0b866]/10"
-              }`}
-            >
-              My Templates ({userTemplates.length})
-            </button>
+          <div className="flex items-center gap-3">
+            <div className="flex gap-1">
+              <button
+                onClick={() => setActiveTab("all")}
+                className={`px-3 py-1.5 text-sm rounded-lg transition-all ${
+                  activeTab === "all"
+                    ? "bg-gradient-to-r from-[#a78bfa] to-[#f472b6] text-white shadow-lg shadow-[#a78bfa]/25"
+                    : "text-[#666680] hover:text-[#a78bfa] hover:bg-[#a78bfa]/10"
+                }`}
+              >
+                All ({documentTemplates.length + userTemplates.length})
+              </button>
+              <button
+                onClick={() => setActiveTab("builtin")}
+                className={`px-3 py-1.5 text-sm rounded-lg transition-all ${
+                  activeTab === "builtin"
+                    ? "bg-[#4ecdc4] text-[#0a0a12] shadow-lg shadow-[#4ecdc4]/25"
+                    : "text-[#666680] hover:text-[#4ecdc4] hover:bg-[#4ecdc4]/10"
+                }`}
+              >
+                Built-in ({documentTemplates.length})
+              </button>
+              <button
+                onClick={() => setActiveTab("custom")}
+                className={`px-3 py-1.5 text-sm rounded-lg transition-all ${
+                  activeTab === "custom"
+                    ? "bg-[#f0b866] text-[#0a0a12] shadow-lg shadow-[#f0b866]/25"
+                    : "text-[#666680] hover:text-[#f0b866] hover:bg-[#f0b866]/10"
+                }`}
+              >
+                My Templates ({userTemplates.length})
+              </button>
+            </div>
+            {/* Storage indicator */}
+            <span className={`text-xs px-2 py-1 rounded-full ${
+              storageMode === "cloud" 
+                ? "bg-[#4ade80]/20 text-[#4ade80]" 
+                : "bg-[#fbbf24]/20 text-[#fbbf24]"
+            }`}>
+              {storageMode === "cloud" ? "☁️ Cloud Synced" : "💾 Local Only"}
+            </span>
           </div>
           <button
             onClick={() => {
               resetForm();
               setShowCreateForm(true);
             }}
-            className="px-3 py-1.5 text-sm bg-[#d4a373] text-[#0f0f0f] rounded hover:bg-[#e5b888] transition-colors"
+            disabled={isSaving}
+            className="px-3 py-1.5 text-sm bg-[#d4a373] text-[#0f0f0f] rounded hover:bg-[#e5b888] transition-colors disabled:opacity-50"
           >
             + New Template
           </button>
@@ -615,29 +733,49 @@ export default function TemplateGallery({ onSelectTemplate, isOpen, onClose }: T
                 <div className="flex gap-3 pt-2">
                   <button
                     onClick={handleCreateTemplate}
-                    disabled={isProcessing}
+                    disabled={isProcessing || isSaving}
                     className="flex-1 px-4 py-2.5 bg-gradient-to-r from-[#a78bfa] to-[#f472b6] text-white rounded-lg hover:opacity-90 hover:shadow-lg hover:shadow-[#a78bfa]/30 transition-all font-medium disabled:opacity-50"
                   >
-                    Create Template
+                    {isSaving ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        Saving...
+                      </span>
+                    ) : (
+                      "Create Template"
+                    )}
                   </button>
                   <button
                     onClick={() => {
                       resetForm();
                       setShowCreateForm(false);
                     }}
-                    className="px-4 py-2.5 bg-[#242424] text-[#fafafa] border border-[#2a2a2a] rounded-lg hover:bg-[#2a2a2a] transition-colors"
+                    disabled={isSaving}
+                    className="px-4 py-2.5 bg-[#242424] text-[#fafafa] border border-[#2a2a2a] rounded-lg hover:bg-[#2a2a2a] transition-colors disabled:opacity-50"
                   >
                     Cancel
                   </button>
                 </div>
               </div>
             </div>
+          ) : isLoading ? (
+            /* Loading State */
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <svg className="animate-spin h-8 w-8 text-[#a78bfa] mb-4" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              <p className="text-[#666666]">Loading templates...</p>
+            </div>
           ) : filteredTemplates.length === 0 ? (
             /* Empty State */
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <p className="text-[#666666] mb-4">
                 {activeTab === "custom"
-                  ? "You haven't created any templates yet."
+                  ? "No shared templates yet. Be the first to create one!"
                   : "No templates found."}
               </p>
               {activeTab === "custom" && (
@@ -656,7 +794,9 @@ export default function TemplateGallery({ onSelectTemplate, isOpen, onClose }: T
             /* Template Grid */
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {filteredTemplates.map((template) => {
-                const isUserTemplate = template.id.startsWith("user-");
+                const isSharedTemplate = template.id.startsWith("shared-");
+                const isLocalTemplate = template.id.startsWith("local-") || template.id.startsWith("user-");
+                const isUserTemplate = isSharedTemplate || isLocalTemplate;
                 const isDeleting = deleteConfirm === template.id;
 
                 return (
@@ -719,9 +859,14 @@ export default function TemplateGallery({ onSelectTemplate, isOpen, onClose }: T
                             <span className="text-xs px-2 py-0.5 bg-[#a78bfa]/20 text-[#a78bfa] rounded-full">
                               {template.category}
                             </span>
-                            {isUserTemplate && (
-                              <span className="text-xs px-2 py-0.5 bg-[#f0b866]/20 text-[#f0b866] rounded-full">
-                                Custom
+                            {isSharedTemplate && (
+                              <span className="text-xs px-2 py-0.5 bg-[#4ade80]/20 text-[#4ade80] rounded-full">
+                                ☁️ Shared
+                              </span>
+                            )}
+                            {isLocalTemplate && (
+                              <span className="text-xs px-2 py-0.5 bg-[#fbbf24]/20 text-[#fbbf24] rounded-full">
+                                💾 Local
                               </span>
                             )}
                           </div>
