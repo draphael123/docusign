@@ -34,6 +34,28 @@ import {
   FavoriteSettings,
 } from "@/utils/favorites";
 
+// New feature imports
+import FindReplace from "@/components/FindReplace";
+import OnboardingTour, { useOnboarding } from "@/components/OnboardingTour";
+import KeyboardShortcuts from "@/components/KeyboardShortcuts";
+import DocumentTags, { TagManager, useDocumentTags } from "@/components/DocumentTags";
+import ProgressIndicator from "@/components/ProgressIndicator";
+import BulkGeneration from "@/components/BulkGeneration";
+import CustomBranding, { useBranding, DEFAULT_BRANDING, BrandingSettings } from "@/components/CustomBranding";
+import AuditTrail, { useAuditTrail } from "@/components/AuditTrail";
+import PDFThemes, { usePDFThemes, PRESET_THEMES, PDFTheme } from "@/components/PDFThemes";
+import ExportHistory, { useExportHistory } from "@/components/ExportHistory";
+import DragDropUpload from "@/components/DragDropUpload";
+import DocumentComparison from "@/components/DocumentComparison";
+import TeamWorkspaces from "@/components/TeamWorkspaces";
+import AIWritingAssistant from "@/components/AIWritingAssistant";
+import WebhookIntegration from "@/components/WebhookIntegration";
+import DocumentScheduling from "@/components/DocumentScheduling";
+import APIAccess from "@/components/APIAccess";
+import LanguageSelector, { useLanguage, LanguageProvider } from "@/components/LanguageSelector";
+import DocumentExpiration from "@/components/DocumentExpiration";
+import AutoSaveIndicator from "@/components/AutoSaveIndicator";
+
 const documentTypes = [
   "Letter of Recommendation",
   "Letter of Termination",
@@ -149,6 +171,25 @@ export default function Home() {
   const [appSettings, setAppSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [isOnline, setIsOnline] = useState<boolean>(true);
 
+  // New feature states
+  const [showFindReplace, setShowFindReplace] = useState<boolean>(false);
+  const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState<boolean>(false);
+  const [showTagManager, setShowTagManager] = useState<boolean>(false);
+  const [showBulkGeneration, setShowBulkGeneration] = useState<boolean>(false);
+  const [showBranding, setShowBranding] = useState<boolean>(false);
+  const [showAuditTrail, setShowAuditTrail] = useState<boolean>(false);
+  const [showPDFThemes, setShowPDFThemes] = useState<boolean>(false);
+  const [showExportHistory, setShowExportHistory] = useState<boolean>(false);
+  const [showDocComparison, setShowDocComparison] = useState<boolean>(false);
+  const [showTeamWorkspaces, setShowTeamWorkspaces] = useState<boolean>(false);
+  const [showAIAssistant, setShowAIAssistant] = useState<boolean>(false);
+  const [showWebhooks, setShowWebhooks] = useState<boolean>(false);
+  const [showScheduling, setShowScheduling] = useState<boolean>(false);
+  const [showAPIAccess, setShowAPIAccess] = useState<boolean>(false);
+  const [showExpiration, setShowExpiration] = useState<boolean>(false);
+  const [documentTags, setDocumentTags] = useState<string[]>([]);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+
   // Hooks for new features
   const { recordDocument } = useStreak();
   const { pinnedIds, togglePin, isPinned } = usePinnedTemplates();
@@ -164,6 +205,13 @@ export default function Home() {
     formatTime, 
     formatMinutes 
   } = useTimeTracker();
+
+  // New feature hooks
+  const { showTour, setShowTour, resetTour } = useOnboarding();
+  const { branding, saveBranding } = useBranding();
+  const { logEvent } = useAuditTrail();
+  const { selectedTheme, selectTheme } = usePDFThemes();
+  const { addRecord: addExportRecord } = useExportHistory();
 
   // Initialize
   useEffect(() => {
@@ -312,12 +360,14 @@ export default function Home() {
   }, [showLivePreview, bodyText, documentType, recipientName, recipientTitle, recipientAddress, subject, fontSize, lineSpacing, selectedSignatory, useCustomSignatory, customSignatoryName, customSignatoryTitle, customSignatoryCompany, customSignatoryPhone, customSignatoryEmail]);
 
   const handleAutoSave = useCallback(() => {
+    setIsSaving(true);
     const draft: DraftData = { documentType, selectedSignatory, bodyText, recipientName, recipientTitle, recipientAddress, subject, customSignatoryName, customSignatoryTitle, customSignatoryCompany, customSignatoryPhone, customSignatoryEmail, fontSize, lineSpacing };
     localStorage.setItem("documentDraft", JSON.stringify(draft));
     const now = new Date();
     localStorage.setItem("lastSaved", now.toISOString());
     setLastSaved(now);
     setHasUnsavedChanges(false);
+    setTimeout(() => setIsSaving(false), 500);
   }, [documentType, selectedSignatory, bodyText, recipientName, recipientTitle, recipientAddress, subject, customSignatoryName, customSignatoryTitle, customSignatoryCompany, customSignatoryPhone, customSignatoryEmail, fontSize, lineSpacing]);
 
   // Auto-save every 30 seconds
@@ -357,6 +407,8 @@ export default function Home() {
     { key: "s", ctrl: true, action: () => handleSaveDraft(), description: "Save draft" },
     { key: "p", ctrl: true, action: () => { if (bodyText.trim()) handlePreviewPDF(); }, description: "Preview PDF" },
     { key: "z", ctrl: true, action: () => handleUndo(), description: "Undo" },
+    { key: "f", ctrl: true, action: () => setShowFindReplace(true), description: "Find & Replace" },
+    { key: "/", ctrl: false, action: () => setShowKeyboardShortcuts(true), description: "Show shortcuts" },
   ]);
 
   // Load draft on mount
@@ -864,10 +916,11 @@ export default function Home() {
                   <p className={`text-sm ${textMuted}`}>Create professional PDF documents for DocuSign</p>
                 </div>
                 <div className="flex items-center gap-3">
-                  {mounted && lastSaved && (
-                    <span className={`text-xs ${textMuted}`}>
-                      {hasUnsavedChanges ? <span className="text-[#d4a373]">Unsaved</span> : <>Saved {getTimeAgo(lastSaved)}</>}
-                    </span>
+                  {mounted && (
+                    <AutoSaveIndicator lastSaved={lastSaved} isSaving={isSaving} hasChanges={hasUnsavedChanges} />
+                  )}
+                  {mounted && (
+                    <LanguageSelector compact />
                   )}
                   {mounted && (
                     <button onClick={toggleTheme} className={`p-2 rounded-lg border-2 transition-all hover:shadow-lg ${theme === "dark" ? "border-[#f0b866] hover:bg-[#f0b866]/10 hover:shadow-[#f0b866]/20" : "border-[#a78bfa] hover:bg-[#a78bfa]/10 hover:shadow-[#a78bfa]/20"}`} title="Toggle theme">
@@ -885,8 +938,13 @@ export default function Home() {
                 <button onClick={() => setShowStatistics(true)} className="px-3 py-1.5 text-sm text-[#60a5fa] hover:text-[#93c5fd] hover:bg-[#60a5fa]/10 rounded transition-colors">Stats</button>
                 <button onClick={() => setShowProfiles(true)} className="px-3 py-1.5 text-sm text-[#fb923c] hover:text-[#fdba74] hover:bg-[#fb923c]/10 rounded transition-colors">Profiles</button>
                 <button onClick={() => setShowVersionHistory(true)} className="px-3 py-1.5 text-sm text-[#4ade80] hover:text-[#86efac] hover:bg-[#4ade80]/10 rounded transition-colors">Versions</button>
-                <button onClick={() => setShowTemplateAnalytics(true)} className="px-3 py-1.5 text-sm text-[#c084fc] hover:text-[#d8b4fe] hover:bg-[#c084fc]/10 rounded transition-colors">📊</button>
-                <button onClick={() => setShowTimeStats(true)} className="px-3 py-1.5 text-sm text-[#22d3ee] hover:text-[#67e8f9] hover:bg-[#22d3ee]/10 rounded transition-colors">⏱️</button>
+                {/* New Feature Buttons */}
+                <button onClick={() => setShowBulkGeneration(true)} className="px-3 py-1.5 text-sm text-[#fbbf24] hover:text-[#fcd34d] hover:bg-[#fbbf24]/10 rounded transition-colors" title="Bulk Generate">📦</button>
+                <button onClick={() => setShowAIAssistant(true)} className="px-3 py-1.5 text-sm text-[#a78bfa] hover:text-[#c4b5fd] hover:bg-[#a78bfa]/10 rounded transition-colors" title="AI Assistant">🤖</button>
+                <button onClick={() => setShowPDFThemes(true)} className="px-3 py-1.5 text-sm text-[#f472b6] hover:text-[#f9a8d4] hover:bg-[#f472b6]/10 rounded transition-colors" title="PDF Themes">🎨</button>
+                <button onClick={() => setShowTemplateAnalytics(true)} className="px-3 py-1.5 text-sm text-[#c084fc] hover:text-[#d8b4fe] hover:bg-[#c084fc]/10 rounded transition-colors" title="Analytics">📊</button>
+                <button onClick={() => setShowTimeStats(true)} className="px-3 py-1.5 text-sm text-[#22d3ee] hover:text-[#67e8f9] hover:bg-[#22d3ee]/10 rounded transition-colors" title="Time Tracker">⏱️</button>
+                <button onClick={() => setShowScheduling(true)} className="px-3 py-1.5 text-sm text-[#fb7185] hover:text-[#fda4af] hover:bg-[#fb7185]/10 rounded transition-colors" title="Schedule">📅</button>
                 <div className="flex-1" />
                 {/* Time Tracker Display */}
                 {isTracking && (
@@ -1126,17 +1184,46 @@ export default function Home() {
                 </button>
               </section>
 
+              {/* Progress Indicator */}
+              <section className="py-4">
+                <ProgressIndicator
+                  bodyText={bodyText}
+                  recipientName={recipientName}
+                  signatorySelected={!!selectedSignatory || (useCustomSignatory && !!customSignatoryName)}
+                  documentType={documentType}
+                  compact={appSettings.compactMode}
+                />
+              </section>
+
               {/* Quick Actions */}
               <section className={`flex flex-wrap gap-3 pt-4 border-t ${borderColor}`}>
                 <button onClick={handleUseLastSettings} className="text-sm text-[#a78bfa] hover:text-[#c4b5fd] transition-colors">Use last settings</button>
                 <span className={textMuted}>·</span>
                 <button onClick={handleSaveAsFavorite} className="text-sm text-[#f472b6] hover:text-[#f9a8d4] transition-colors">Save as favorite</button>
                 <span className={textMuted}>·</span>
-                <button onClick={() => setShowGuide(true)} className="text-sm text-[#4ecdc4] hover:text-[#7eddd6] transition-colors">Help</button>
+                <button onClick={() => setShowDocComparison(true)} className="text-sm text-[#4ecdc4] hover:text-[#7eddd6] transition-colors">Compare</button>
                 <span className={textMuted}>·</span>
-                <button onClick={() => setShowPrivacySettings(true)} className="text-sm text-[#60a5fa] hover:text-[#93c5fd] transition-colors">Privacy</button>
+                <button onClick={() => setShowBranding(true)} className="text-sm text-[#fbbf24] hover:text-[#fcd34d] transition-colors">Branding</button>
                 <span className={textMuted}>·</span>
-                <Link href="/suggestions" className="text-sm text-[#f0b866] hover:text-[#f5c97a] transition-colors">Feedback</Link>
+                <button onClick={() => setShowExportHistory(true)} className="text-sm text-[#60a5fa] hover:text-[#93c5fd] transition-colors">Export History</button>
+                <span className={textMuted}>·</span>
+                <button onClick={() => setShowGuide(true)} className="text-sm text-[#4ade80] hover:text-[#86efac] transition-colors">Help</button>
+                <span className={textMuted}>·</span>
+                <button onClick={() => setShowKeyboardShortcuts(true)} className="text-sm text-[#fb923c] hover:text-[#fdba74] transition-colors">⌨️</button>
+                <span className={textMuted}>·</span>
+                <button onClick={() => setShowPrivacySettings(true)} className="text-sm text-[#f472b6] hover:text-[#f9a8d4] transition-colors">Privacy</button>
+              </section>
+
+              {/* Advanced Features */}
+              <section className={`flex flex-wrap gap-3 pt-4 border-t ${borderColor}`}>
+                <button onClick={() => setShowTeamWorkspaces(true)} className="text-sm text-[#a78bfa] hover:text-[#c4b5fd] transition-colors">👥 Teams</button>
+                <button onClick={() => setShowWebhooks(true)} className="text-sm text-[#4ecdc4] hover:text-[#7eddd6] transition-colors">🔗 Webhooks</button>
+                <button onClick={() => setShowAPIAccess(true)} className="text-sm text-[#60a5fa] hover:text-[#93c5fd] transition-colors">🔑 API</button>
+                <button onClick={() => setShowExpiration(true)} className="text-sm text-[#f87171] hover:text-[#fca5a5] transition-colors">⏳ Expiration</button>
+                <button onClick={() => setShowAuditTrail(true)} className="text-sm text-[#f0b866] hover:text-[#f5c97a] transition-colors">📜 Audit</button>
+                <button onClick={resetTour} className="text-sm text-[#c084fc] hover:text-[#d8b4fe] transition-colors">🎓 Tour</button>
+                <div className="flex-1" />
+                <Link href="/suggestions" className="text-sm text-[#f0b866] hover:text-[#f5c97a] transition-colors">💬 Feedback</Link>
               </section>
             </div>
           </div>
@@ -1289,6 +1376,109 @@ export default function Home() {
         >
           Exit Focus Mode
         </button>
+      )}
+
+      {/* New Feature Modals */}
+      <FindReplace 
+        isOpen={showFindReplace} 
+        onClose={() => setShowFindReplace(false)} 
+        text={bodyText} 
+        onTextChange={setBodyText} 
+      />
+      
+      <KeyboardShortcuts 
+        isOpen={showKeyboardShortcuts} 
+        onClose={() => setShowKeyboardShortcuts(false)} 
+      />
+      
+      <TagManager 
+        isOpen={showTagManager} 
+        onClose={() => setShowTagManager(false)} 
+      />
+      
+      <BulkGeneration 
+        isOpen={showBulkGeneration} 
+        onClose={() => setShowBulkGeneration(false)}
+        templateBody={bodyText}
+        documentType={documentType}
+        onGenerate={(records) => {
+          toast.success(`Generating ${records.length} documents...`);
+          setShowBulkGeneration(false);
+        }}
+      />
+      
+      <CustomBranding 
+        isOpen={showBranding} 
+        onClose={() => setShowBranding(false)}
+        branding={branding}
+        onBrandingChange={saveBranding}
+      />
+      
+      <AuditTrail 
+        isOpen={showAuditTrail} 
+        onClose={() => setShowAuditTrail(false)} 
+      />
+      
+      <PDFThemes 
+        isOpen={showPDFThemes} 
+        onClose={() => setShowPDFThemes(false)}
+        selectedTheme={selectedTheme}
+        onThemeChange={selectTheme}
+      />
+      
+      <ExportHistory 
+        isOpen={showExportHistory} 
+        onClose={() => setShowExportHistory(false)} 
+      />
+      
+      <DocumentComparison 
+        isOpen={showDocComparison} 
+        onClose={() => setShowDocComparison(false)}
+        currentText={bodyText}
+      />
+      
+      <TeamWorkspaces 
+        isOpen={showTeamWorkspaces} 
+        onClose={() => setShowTeamWorkspaces(false)} 
+      />
+      
+      <AIWritingAssistant 
+        isOpen={showAIAssistant} 
+        onClose={() => setShowAIAssistant(false)}
+        onInsert={(text) => {
+          insertAtCursor(text);
+          toast.success("Text inserted");
+        }}
+        selectedText={typeof window !== "undefined" ? (window.getSelection?.()?.toString() || "") : ""}
+      />
+      
+      <WebhookIntegration 
+        isOpen={showWebhooks} 
+        onClose={() => setShowWebhooks(false)} 
+      />
+      
+      <DocumentScheduling 
+        isOpen={showScheduling} 
+        onClose={() => setShowScheduling(false)}
+        currentDocumentType={documentType}
+        currentBodyText={bodyText}
+        currentRecipientName={recipientName}
+        onGenerate={handleGeneratePDF}
+      />
+      
+      <APIAccess 
+        isOpen={showAPIAccess} 
+        onClose={() => setShowAPIAccess(false)} 
+      />
+      
+      <DocumentExpiration 
+        isOpen={showExpiration} 
+        onClose={() => setShowExpiration(false)} 
+      />
+
+      {/* Onboarding Tour */}
+      {showTour && (
+        <OnboardingTour onComplete={() => setShowTour(false)} />
       )}
     </>
   );
