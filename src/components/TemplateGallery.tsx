@@ -237,18 +237,18 @@ export default function TemplateGallery({ onSelectTemplate, isOpen, onClose }: T
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-      <div className="bg-[#1a1a1a] rounded-lg max-w-4xl w-full max-h-[90vh] flex flex-col border border-[#2a2a2a]">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-[#12121a]/95 backdrop-blur-md rounded-xl max-w-4xl w-full max-h-[90vh] flex flex-col border border-[#2a2a3a] shadow-2xl shadow-[#a78bfa]/10">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-[#2a2a2a]">
-          <h2 className="text-xl text-[#fafafa]">Templates</h2>
+        <div className="flex items-center justify-between p-4 border-b border-[#2a2a3a]">
+          <h2 className="text-xl gradient-text font-semibold">Templates</h2>
           <div className="flex items-center gap-3">
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search templates..."
-              className="px-3 py-1.5 text-sm bg-[#242424] border border-[#2a2a2a] rounded-lg text-[#fafafa] placeholder-[#666666] focus:border-[#d4a373] focus:outline-none w-48"
+              className="px-3 py-1.5 text-sm bg-[#1a1a24] border border-[#2a2a3a] rounded-lg text-[#fafafa] placeholder-[#666680] focus:border-[#a78bfa] focus:shadow-lg focus:shadow-[#a78bfa]/20 focus:outline-none w-48 transition-all"
             />
             <button
               onClick={onClose}
@@ -264,30 +264,30 @@ export default function TemplateGallery({ onSelectTemplate, isOpen, onClose }: T
           <div className="flex gap-1">
             <button
               onClick={() => setActiveTab("all")}
-              className={`px-3 py-1.5 text-sm rounded transition-colors ${
+              className={`px-3 py-1.5 text-sm rounded-lg transition-all ${
                 activeTab === "all"
-                  ? "bg-[#242424] text-[#fafafa]"
-                  : "text-[#666666] hover:text-[#a0a0a0]"
+                  ? "bg-gradient-to-r from-[#a78bfa] to-[#f472b6] text-white shadow-lg shadow-[#a78bfa]/25"
+                  : "text-[#666680] hover:text-[#a78bfa] hover:bg-[#a78bfa]/10"
               }`}
             >
               All ({documentTemplates.length + userTemplates.length})
             </button>
             <button
               onClick={() => setActiveTab("builtin")}
-              className={`px-3 py-1.5 text-sm rounded transition-colors ${
+              className={`px-3 py-1.5 text-sm rounded-lg transition-all ${
                 activeTab === "builtin"
-                  ? "bg-[#242424] text-[#fafafa]"
-                  : "text-[#666666] hover:text-[#a0a0a0]"
+                  ? "bg-[#4ecdc4] text-[#0a0a12] shadow-lg shadow-[#4ecdc4]/25"
+                  : "text-[#666680] hover:text-[#4ecdc4] hover:bg-[#4ecdc4]/10"
               }`}
             >
               Built-in ({documentTemplates.length})
             </button>
             <button
               onClick={() => setActiveTab("custom")}
-              className={`px-3 py-1.5 text-sm rounded transition-colors ${
+              className={`px-3 py-1.5 text-sm rounded-lg transition-all ${
                 activeTab === "custom"
-                  ? "bg-[#242424] text-[#fafafa]"
-                  : "text-[#666666] hover:text-[#a0a0a0]"
+                  ? "bg-[#f0b866] text-[#0a0a12] shadow-lg shadow-[#f0b866]/25"
+                  : "text-[#666680] hover:text-[#f0b866] hover:bg-[#f0b866]/10"
               }`}
             >
               My Templates ({userTemplates.length})
@@ -485,7 +485,7 @@ export default function TemplateGallery({ onSelectTemplate, isOpen, onClose }: T
                   <button
                     onClick={handleCreateTemplate}
                     disabled={isProcessing}
-                    className="flex-1 px-4 py-2.5 bg-[#d4a373] text-[#0f0f0f] rounded-lg hover:bg-[#e5b888] transition-colors font-medium disabled:opacity-50"
+                    className="flex-1 px-4 py-2.5 bg-gradient-to-r from-[#a78bfa] to-[#f472b6] text-white rounded-lg hover:opacity-90 hover:shadow-lg hover:shadow-[#a78bfa]/30 transition-all font-medium disabled:opacity-50"
                   >
                     Create Template
                   </button>
@@ -531,10 +531,12 @@ export default function TemplateGallery({ onSelectTemplate, isOpen, onClose }: T
                 return (
                   <div
                     key={template.id}
-                    className={`p-4 rounded-lg border transition-colors ${
+                    className={`p-4 rounded-xl border transition-all hover:shadow-lg ${
                       isDeleting
                         ? "bg-[#f87171]/10 border-[#f87171]/30"
-                        : "bg-[#242424] border-[#2a2a2a] hover:border-[#3a3a3a]"
+                        : isUserTemplate 
+                          ? "bg-[#1a1a24] border-[#f0b866]/30 hover:border-[#f0b866] hover:shadow-[#f0b866]/10"
+                          : "bg-[#1a1a24] border-[#4ecdc4]/30 hover:border-[#4ecdc4] hover:shadow-[#4ecdc4]/10"
                     }`}
                   >
                     {isDeleting ? (
@@ -583,11 +585,11 @@ export default function TemplateGallery({ onSelectTemplate, isOpen, onClose }: T
                         </p>
                         <div className="flex items-center justify-between">
                           <div className="flex gap-2">
-                            <span className="text-xs px-2 py-0.5 bg-[#1a1a1a] text-[#a0a0a0] rounded">
+                            <span className="text-xs px-2 py-0.5 bg-[#a78bfa]/20 text-[#a78bfa] rounded-full">
                               {template.category}
                             </span>
                             {isUserTemplate && (
-                              <span className="text-xs px-2 py-0.5 bg-[#d4a373]/20 text-[#d4a373] rounded">
+                              <span className="text-xs px-2 py-0.5 bg-[#f0b866]/20 text-[#f0b866] rounded-full">
                                 Custom
                               </span>
                             )}
@@ -597,7 +599,7 @@ export default function TemplateGallery({ onSelectTemplate, isOpen, onClose }: T
                               onSelectTemplate(template);
                               onClose();
                             }}
-                            className="text-sm text-[#d4a373] hover:text-[#e5b888] transition-colors"
+                            className="text-sm px-3 py-1 rounded-full bg-[#4ecdc4]/20 text-[#4ecdc4] hover:bg-[#4ecdc4] hover:text-[#0a0a12] transition-all"
                           >
                             Use →
                           </button>

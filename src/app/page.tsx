@@ -697,18 +697,24 @@ export default function Home() {
   };
 
   // Theme-aware classes
-  const bgPrimary = theme === "light" ? "bg-[#f5f5f5]" : "bg-[#0f0f0f]";
-  const bgSecondary = theme === "light" ? "bg-white" : "bg-[#1a1a1a]";
-  const bgElevated = theme === "light" ? "bg-[#fafafa]" : "bg-[#242424]";
-  const textPrimary = theme === "light" ? "text-[#1a1a1a]" : "text-[#fafafa]";
-  const textSecondary = theme === "light" ? "text-[#666666]" : "text-[#a0a0a0]";
-  const textMuted = theme === "light" ? "text-[#999999]" : "text-[#666666]";
-  const borderColor = theme === "light" ? "border-[#e0e0e0]" : "border-[#2a2a2a]";
+  const bgPrimary = theme === "light" ? "bg-transparent" : "bg-transparent";
+  const bgSecondary = theme === "light" ? "bg-white/90 backdrop-blur-sm" : "bg-[#12121a]/90 backdrop-blur-sm";
+  const bgElevated = theme === "light" ? "bg-[#f0f2f5]" : "bg-[#1a1a24]";
+  const textPrimary = theme === "light" ? "text-[#1a1a2e]" : "text-[#fafafa]";
+  const textSecondary = theme === "light" ? "text-[#4a4a6a]" : "text-[#a0a0a0]";
+  const textMuted = theme === "light" ? "text-[#8888a0]" : "text-[#666680]";
+  const borderColor = theme === "light" ? "border-[#e0e0ee]" : "border-[#2a2a3a]";
+  
+  // Accent colors
+  const accentViolet = "text-[#a78bfa]";
+  const accentTeal = "text-[#4ecdc4]";
+  const accentPink = "text-[#f472b6]";
+  const accentGold = "text-[#f0b866]";
 
   return (
     <>
       <SkipToContent />
-      <Toaster position="bottom-right" toastOptions={{ style: { background: theme === "light" ? "#fff" : "#242424", color: theme === "light" ? "#1a1a1a" : "#fafafa", border: `1px solid ${theme === "light" ? "#e0e0e0" : "#2a2a2a"}` } }} />
+      <Toaster position="bottom-right" toastOptions={{ style: { background: theme === "light" ? "#fff" : "#1a1a24", color: theme === "light" ? "#1a1a2e" : "#fafafa", border: `1px solid ${theme === "light" ? "#e0e0ee" : "#2a2a3a"}`, boxShadow: '0 4px 20px rgba(167, 139, 250, 0.15)' } }} />
 
       <div className={`min-h-screen ${bgPrimary} transition-colors`}>
         <main id="main-content" className={`py-8 px-4 sm:px-6 lg:px-8 ${showLivePreview ? "lg:pr-[420px]" : ""}`} role="main" tabIndex={-1}>
@@ -717,7 +723,7 @@ export default function Home() {
             <header className="mb-8">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h1 className={`text-3xl sm:text-4xl ${textPrimary} mb-1`} style={{ fontFamily: "'Crimson Pro', serif" }}>
+                  <h1 className="text-3xl sm:text-4xl mb-1 gradient-text" style={{ fontFamily: "'Crimson Pro', serif" }}>
                     Document Generator
                   </h1>
                   <p className={`text-sm ${textMuted}`}>Create professional PDF documents for DocuSign</p>
@@ -729,7 +735,7 @@ export default function Home() {
                     </span>
                   )}
                   {mounted && (
-                    <button onClick={toggleTheme} className={`p-2 rounded-lg ${bgElevated} ${borderColor} border transition-colors`} title="Toggle theme">
+                    <button onClick={toggleTheme} className={`p-2 rounded-lg border-2 transition-all hover:shadow-lg ${theme === "dark" ? "border-[#f0b866] hover:bg-[#f0b866]/10 hover:shadow-[#f0b866]/20" : "border-[#a78bfa] hover:bg-[#a78bfa]/10 hover:shadow-[#a78bfa]/20"}`} title="Toggle theme">
                       {theme === "dark" ? "☀️" : "🌙"}
                     </button>
                   )}
@@ -738,28 +744,32 @@ export default function Home() {
 
               {/* Toolbar */}
               <nav className={`flex flex-wrap gap-2 pb-4 border-b ${borderColor}`}>
-                <button onClick={() => setShowTemplateGallery(true)} className={`px-3 py-1.5 text-sm ${textSecondary} hover:${textPrimary} hover:${bgElevated} rounded transition-colors`}>Templates</button>
-                <button onClick={() => setShowFavorites(true)} className={`px-3 py-1.5 text-sm ${textSecondary} hover:${textPrimary} hover:${bgElevated} rounded transition-colors`}>Favorites</button>
-                <button onClick={() => setShowHistory(true)} className={`px-3 py-1.5 text-sm ${textSecondary} hover:${textPrimary} hover:${bgElevated} rounded transition-colors`}>History</button>
-                <button onClick={() => setShowStatistics(true)} className={`px-3 py-1.5 text-sm ${textSecondary} hover:${textPrimary} hover:${bgElevated} rounded transition-colors`}>Stats</button>
+                <button onClick={() => setShowTemplateGallery(true)} className="px-3 py-1.5 text-sm text-[#a78bfa] hover:text-[#c4b5fd] hover:bg-[#a78bfa]/10 rounded transition-colors">Templates</button>
+                <button onClick={() => setShowFavorites(true)} className="px-3 py-1.5 text-sm text-[#f472b6] hover:text-[#f9a8d4] hover:bg-[#f472b6]/10 rounded transition-colors">Favorites</button>
+                <button onClick={() => setShowHistory(true)} className="px-3 py-1.5 text-sm text-[#4ecdc4] hover:text-[#7eddd6] hover:bg-[#4ecdc4]/10 rounded transition-colors">History</button>
+                <button onClick={() => setShowStatistics(true)} className="px-3 py-1.5 text-sm text-[#60a5fa] hover:text-[#93c5fd] hover:bg-[#60a5fa]/10 rounded transition-colors">Stats</button>
                 <div className="flex-1" />
-                <button onClick={() => setShowLivePreview(!showLivePreview)} className={`px-3 py-1.5 text-sm rounded transition-colors ${showLivePreview ? "bg-[#d4a373] text-[#0f0f0f]" : `${textSecondary} hover:${bgElevated}`}`}>
+                <button onClick={() => setShowLivePreview(!showLivePreview)} className={`px-3 py-1.5 text-sm rounded transition-all ${showLivePreview ? "bg-gradient-to-r from-[#a78bfa] to-[#4ecdc4] text-white shadow-lg shadow-[#a78bfa]/25" : "text-[#f0b866] hover:text-[#f5c97a] hover:bg-[#f0b866]/10"}`}>
                   {showLivePreview ? "Hide Preview" : "Live Preview"}
                 </button>
-                <button onClick={handleSaveDraft} className={`px-3 py-1.5 text-sm ${textSecondary} hover:${textPrimary} hover:${bgElevated} rounded transition-colors`} title="Ctrl+S">Save</button>
-                <button onClick={handleLoadDraft} className={`px-3 py-1.5 text-sm ${textSecondary} hover:${textPrimary} hover:${bgElevated} rounded transition-colors`}>Load</button>
-                <button onClick={handleClearDraft} className={`px-3 py-1.5 text-sm ${textSecondary} hover:${textPrimary} hover:${bgElevated} rounded transition-colors`}>Clear</button>
+                <button onClick={handleSaveDraft} className={`px-3 py-1.5 text-sm ${textSecondary} hover:text-[#4ade80] hover:bg-[#4ade80]/10 rounded transition-colors`} title="Ctrl+S">Save</button>
+                <button onClick={handleLoadDraft} className={`px-3 py-1.5 text-sm ${textSecondary} hover:text-[#60a5fa] hover:bg-[#60a5fa]/10 rounded transition-colors`}>Load</button>
+                <button onClick={handleClearDraft} className={`px-3 py-1.5 text-sm ${textSecondary} hover:text-[#ff7a7a] hover:bg-[#ff7a7a]/10 rounded transition-colors`}>Clear</button>
               </nav>
 
               {/* Recently Used */}
               {recentDocTypes.length > 1 && (
                 <div className={`mt-4 flex flex-wrap items-center gap-2 text-xs ${textMuted}`}>
-                  <span>Recent:</span>
-                  {recentDocTypes.slice(0, 3).map((type) => (
-                    <button key={type} onClick={() => setDocumentType(type)} className={`px-2 py-1 rounded ${bgElevated} ${borderColor} border hover:border-[#d4a373] transition-colors`}>
-                      {type.replace("Letter of ", "")}
-                    </button>
-                  ))}
+                  <span className="text-[#a78bfa]">Recent:</span>
+                  {recentDocTypes.slice(0, 3).map((type, idx) => {
+                    const colors = ["#4ecdc4", "#f472b6", "#60a5fa"];
+                    const color = colors[idx % colors.length];
+                    return (
+                      <button key={type} onClick={() => setDocumentType(type)} className={`px-2 py-1 rounded ${bgElevated} border transition-all hover:shadow-md`} style={{ borderColor: color, color: color }}>
+                        {type.replace("Letter of ", "")}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </header>
@@ -767,23 +777,23 @@ export default function Home() {
             {/* Form */}
             <div className="space-y-8">
               {/* Document Type */}
-              <section>
-                <label htmlFor="documentType" className={`block text-sm font-medium ${textSecondary} mb-2`}>Document Type</label>
-                <select id="documentType" value={documentType} onChange={(e) => setDocumentType(e.target.value)} className={`w-full px-4 py-3 rounded-lg ${textPrimary} ${bgSecondary} border ${borderColor} focus:border-[#d4a373] cursor-pointer`}>
+              <section className={`p-5 rounded-xl ${bgSecondary} border ${borderColor} border-l-4 border-l-[#a78bfa]`}>
+                <label htmlFor="documentType" className="block text-sm font-medium text-[#a78bfa] mb-2">Document Type</label>
+                <select id="documentType" value={documentType} onChange={(e) => setDocumentType(e.target.value)} className={`w-full px-4 py-3 rounded-lg ${textPrimary} ${bgElevated} border ${borderColor} focus:border-[#a78bfa] cursor-pointer`}>
                   {documentTypes.map((type) => (<option key={type} value={type}>{type}</option>))}
                 </select>
               </section>
 
               {/* Recipient */}
-              <section>
+              <section className={`p-5 rounded-xl ${bgSecondary} border ${borderColor} border-l-4 border-l-[#4ecdc4]`}>
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className={`text-lg ${textPrimary}`}>Recipient</h2>
+                  <h2 className="text-lg text-[#4ecdc4]">Recipient</h2>
                   <div className="flex gap-2">
-                    <button onClick={() => setShowAddressBook(true)} className={`text-xs px-2 py-1 ${bgElevated} ${borderColor} border rounded hover:border-[#d4a373] transition-colors ${textMuted}`}>
+                    <button onClick={() => setShowAddressBook(true)} className={`text-xs px-2 py-1 ${bgElevated} border ${borderColor} rounded hover:border-[#4ecdc4] hover:text-[#4ecdc4] transition-colors ${textMuted}`}>
                       Address Book ({savedRecipients.length})
                     </button>
                     {recipientName && (
-                      <button onClick={saveCurrentRecipient} className="text-xs px-2 py-1 bg-[#d4a373] text-[#0f0f0f] rounded hover:bg-[#e5b888] transition-colors">
+                      <button onClick={saveCurrentRecipient} className="text-xs px-2 py-1 bg-[#4ecdc4] text-[#0a0a12] rounded hover:bg-[#7eddd6] transition-colors font-medium">
                         Save Recipient
                       </button>
                     )}
@@ -792,32 +802,32 @@ export default function Home() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label htmlFor="recipientName" className={`block text-sm ${textMuted} mb-1`}>Name</label>
-                    <input type="text" id="recipientName" value={recipientName} onChange={(e) => setRecipientName(e.target.value)} className={`w-full px-4 py-2.5 rounded-lg ${bgSecondary} border ${borderColor}`} placeholder="Optional" />
+                    <input type="text" id="recipientName" value={recipientName} onChange={(e) => setRecipientName(e.target.value)} className={`w-full px-4 py-2.5 rounded-lg ${bgElevated} border ${borderColor} focus:border-[#4ecdc4]`} placeholder="Optional" />
                   </div>
                   <div>
                     <label htmlFor="recipientTitle" className={`block text-sm ${textMuted} mb-1`}>Title</label>
-                    <input type="text" id="recipientTitle" value={recipientTitle} onChange={(e) => setRecipientTitle(e.target.value)} className={`w-full px-4 py-2.5 rounded-lg ${bgSecondary} border ${borderColor}`} placeholder="Optional" />
+                    <input type="text" id="recipientTitle" value={recipientTitle} onChange={(e) => setRecipientTitle(e.target.value)} className={`w-full px-4 py-2.5 rounded-lg ${bgElevated} border ${borderColor} focus:border-[#4ecdc4]`} placeholder="Optional" />
                   </div>
                   <div className="sm:col-span-2">
                     <label htmlFor="recipientAddress" className={`block text-sm ${textMuted} mb-1`}>Address</label>
-                    <textarea id="recipientAddress" value={recipientAddress} onChange={(e) => setRecipientAddress(e.target.value)} rows={2} className={`w-full px-4 py-2.5 rounded-lg resize-none ${bgSecondary} border ${borderColor}`} placeholder="Optional" />
+                    <textarea id="recipientAddress" value={recipientAddress} onChange={(e) => setRecipientAddress(e.target.value)} rows={2} className={`w-full px-4 py-2.5 rounded-lg resize-none ${bgElevated} border ${borderColor} focus:border-[#4ecdc4]`} placeholder="Optional" />
                   </div>
                   <div className="sm:col-span-2">
                     <label htmlFor="subject" className={`block text-sm ${textMuted} mb-1`}>Subject</label>
-                    <input type="text" id="subject" value={subject} onChange={(e) => setSubject(e.target.value)} className={`w-full px-4 py-2.5 rounded-lg ${bgSecondary} border ${borderColor}`} placeholder="Optional" />
+                    <input type="text" id="subject" value={subject} onChange={(e) => setSubject(e.target.value)} className={`w-full px-4 py-2.5 rounded-lg ${bgElevated} border ${borderColor} focus:border-[#4ecdc4]`} placeholder="Optional" />
                   </div>
                 </div>
               </section>
 
               {/* Signatory */}
-              <section>
-                <h2 className={`text-lg ${textPrimary} mb-4`}>Signatory</h2>
+              <section className={`p-5 rounded-xl ${bgSecondary} border ${borderColor} border-l-4 border-l-[#f472b6]`}>
+                <h2 className="text-lg text-[#f472b6] mb-4">Signatory</h2>
                 <div className="space-y-2">
                   {signatories.map((signatory) => (
-                    <label key={signatory.id} className={`flex items-center p-4 rounded-lg cursor-pointer transition-colors border ${!useCustomSignatory && selectedSignatory === signatory.id ? `${bgElevated} border-[#d4a373]` : `${bgSecondary} ${borderColor} hover:border-[#3a3a3a]`}`}>
+                    <label key={signatory.id} className={`flex items-center p-4 rounded-lg cursor-pointer transition-all border ${!useCustomSignatory && selectedSignatory === signatory.id ? `${bgElevated} border-[#f472b6] shadow-lg shadow-[#f472b6]/10` : `${bgElevated} ${borderColor} hover:border-[#f472b6]/50`}`}>
                       <input type="radio" name="signatory" value={signatory.id} checked={!useCustomSignatory && selectedSignatory === signatory.id} onChange={(e) => { setSelectedSignatory(e.target.value); setUseCustomSignatory(false); }} className="sr-only" />
-                      <div className={`w-4 h-4 rounded-full border-2 mr-3 flex items-center justify-center ${!useCustomSignatory && selectedSignatory === signatory.id ? "border-[#d4a373]" : "border-[#666666]"}`}>
-                        {!useCustomSignatory && selectedSignatory === signatory.id && <div className="w-2 h-2 rounded-full bg-[#d4a373]" />}
+                      <div className={`w-4 h-4 rounded-full border-2 mr-3 flex items-center justify-center ${!useCustomSignatory && selectedSignatory === signatory.id ? "border-[#f472b6]" : "border-[#666680]"}`}>
+                        {!useCustomSignatory && selectedSignatory === signatory.id && <div className="w-2 h-2 rounded-full bg-[#f472b6]" />}
                       </div>
                       <div>
                         <div className={textPrimary}>{signatory.name}</div>
@@ -825,21 +835,21 @@ export default function Home() {
                       </div>
                     </label>
                   ))}
-                  <div className={`p-4 rounded-lg border transition-colors ${useCustomSignatory ? `${bgElevated} border-[#d4a373]` : `${bgSecondary} ${borderColor}`}`}>
+                  <div className={`p-4 rounded-lg border transition-all ${useCustomSignatory ? `${bgElevated} border-[#f472b6] shadow-lg shadow-[#f472b6]/10` : `${bgElevated} ${borderColor}`}`}>
                     <label className="flex items-center cursor-pointer">
                       <input type="radio" name="signatory" checked={useCustomSignatory} onChange={() => setUseCustomSignatory(true)} className="sr-only" />
-                      <div className={`w-4 h-4 rounded-full border-2 mr-3 flex items-center justify-center ${useCustomSignatory ? "border-[#d4a373]" : "border-[#666666]"}`}>
-                        {useCustomSignatory && <div className="w-2 h-2 rounded-full bg-[#d4a373]" />}
+                      <div className={`w-4 h-4 rounded-full border-2 mr-3 flex items-center justify-center ${useCustomSignatory ? "border-[#f472b6]" : "border-[#666680]"}`}>
+                        {useCustomSignatory && <div className="w-2 h-2 rounded-full bg-[#f472b6]" />}
                       </div>
                       <span className={textPrimary}>Custom Signatory</span>
                     </label>
                     {useCustomSignatory && (
                       <div className="mt-4 space-y-3 pl-7">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <input type="text" value={customSignatoryName} onChange={(e) => setCustomSignatoryName(e.target.value)} placeholder="Name *" className={`px-3 py-2 rounded-lg text-sm ${bgSecondary} border ${borderColor}`} />
-                          <input type="text" value={customSignatoryTitle} onChange={(e) => setCustomSignatoryTitle(e.target.value)} placeholder="Title" className={`px-3 py-2 rounded-lg text-sm ${bgSecondary} border ${borderColor}`} />
+                          <input type="text" value={customSignatoryName} onChange={(e) => setCustomSignatoryName(e.target.value)} placeholder="Name *" className={`px-3 py-2 rounded-lg text-sm ${bgElevated} border ${borderColor} focus:border-[#f472b6]`} />
+                          <input type="text" value={customSignatoryTitle} onChange={(e) => setCustomSignatoryTitle(e.target.value)} placeholder="Title" className={`px-3 py-2 rounded-lg text-sm ${bgElevated} border ${borderColor} focus:border-[#f472b6]`} />
                         </div>
-                        <input type="text" value={customSignatoryCompany} onChange={(e) => setCustomSignatoryCompany(e.target.value)} placeholder="Company" className={`w-full px-3 py-2 rounded-lg text-sm ${bgSecondary} border ${borderColor}`} />
+                        <input type="text" value={customSignatoryCompany} onChange={(e) => setCustomSignatoryCompany(e.target.value)} placeholder="Company" className={`w-full px-3 py-2 rounded-lg text-sm ${bgElevated} border ${borderColor} focus:border-[#f472b6]`} />
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <input type="text" value={customSignatoryPhone} onChange={(e) => setCustomSignatoryPhone(e.target.value)} placeholder="Phone" className={`px-3 py-2 rounded-lg text-sm ${bgSecondary} border ${borderColor}`} />
                           <input type="email" value={customSignatoryEmail} onChange={(e) => setCustomSignatoryEmail(e.target.value)} placeholder="Email" className={`px-3 py-2 rounded-lg text-sm ${bgSecondary} border ${borderColor}`} />
@@ -851,29 +861,29 @@ export default function Home() {
               </section>
 
               {/* Formatting */}
-              <section>
-                <h2 className={`text-lg ${textPrimary} mb-4`}>Formatting</h2>
+              <section className={`p-5 rounded-xl ${bgSecondary} border ${borderColor} border-l-4 border-l-[#60a5fa]`}>
+                <h2 className="text-lg text-[#60a5fa] mb-4">Formatting</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div>
-                    <label htmlFor="fontSize" className={`block text-sm ${textMuted} mb-2`}>Font Size: {fontSize}pt</label>
-                    <input type="range" id="fontSize" min="9" max="14" value={fontSize} onChange={(e) => setFontSize(Number(e.target.value))} className="w-full accent-[#d4a373]" />
+                    <label htmlFor="fontSize" className={`block text-sm ${textMuted} mb-2`}>Font Size: <span className="text-[#a78bfa]">{fontSize}pt</span></label>
+                    <input type="range" id="fontSize" min="9" max="14" value={fontSize} onChange={(e) => setFontSize(Number(e.target.value))} className="w-full" />
                   </div>
                   <div>
-                    <label htmlFor="lineSpacing" className={`block text-sm ${textMuted} mb-2`}>Line Spacing: {lineSpacing.toFixed(1)}</label>
-                    <input type="range" id="lineSpacing" min="1" max="2.5" step="0.1" value={lineSpacing} onChange={(e) => setLineSpacing(Number(e.target.value))} className="w-full accent-[#d4a373]" />
+                    <label htmlFor="lineSpacing" className={`block text-sm ${textMuted} mb-2`}>Line Spacing: <span className="text-[#4ecdc4]">{lineSpacing.toFixed(1)}</span></label>
+                    <input type="range" id="lineSpacing" min="1" max="2.5" step="0.1" value={lineSpacing} onChange={(e) => setLineSpacing(Number(e.target.value))} className="w-full" />
                   </div>
                 </div>
               </section>
 
               {/* Document Body */}
-              <section>
+              <section className={`p-5 rounded-xl ${bgSecondary} border ${borderColor} border-l-4 border-l-[#f0b866]`}>
                 <div className="flex items-center justify-between mb-2">
-                  <label htmlFor="bodyText" className={`text-sm font-medium ${textSecondary}`}>Document Body</label>
+                  <label htmlFor="bodyText" className="text-sm font-medium text-[#f0b866]">Document Body</label>
                   <div className="flex items-center gap-3">
                     {showWordGoal && wordCountGoal > 0 && (
                       <div className="flex items-center gap-2">
                         <div className={`w-20 h-1.5 rounded-full ${bgElevated} overflow-hidden`}>
-                          <div className="h-full bg-[#d4a373] transition-all" style={{ width: `${Math.min(100, (wordCount / wordCountGoal) * 100)}%` }} />
+                          <div className="h-full bg-gradient-to-r from-[#f0b866] to-[#4ecdc4] transition-all" style={{ width: `${Math.min(100, (wordCount / wordCountGoal) * 100)}%` }} />
                         </div>
                         <span className={`text-xs ${textMuted}`}>{wordCount}/{wordCountGoal}</span>
                       </div>
@@ -884,19 +894,19 @@ export default function Home() {
 
                 {/* Quick Insert Toolbar */}
                 <div className={`flex flex-wrap gap-1 mb-2 p-2 rounded-lg ${bgElevated} border ${borderColor}`}>
-                  <button onClick={insertDate} className={`px-2 py-1 text-xs ${textMuted} hover:${textPrimary} hover:bg-[#d4a373]/10 rounded transition-colors`} title="Insert today's date">Date</button>
-                  <button onClick={insertHorizontalLine} className={`px-2 py-1 text-xs ${textMuted} hover:${textPrimary} hover:bg-[#d4a373]/10 rounded transition-colors`} title="Insert horizontal line">Line</button>
-                  <button onClick={insertPageBreak} className={`px-2 py-1 text-xs ${textMuted} hover:${textPrimary} hover:bg-[#d4a373]/10 rounded transition-colors`} title="Insert page break">Page Break</button>
-                  <button onClick={insertSignatureBlock} className={`px-2 py-1 text-xs ${textMuted} hover:${textPrimary} hover:bg-[#d4a373]/10 rounded transition-colors`} title="Insert signature block">Signature</button>
+                  <button onClick={insertDate} className="px-2 py-1 text-xs text-[#60a5fa] hover:bg-[#60a5fa]/15 rounded transition-colors" title="Insert today's date">Date</button>
+                  <button onClick={insertHorizontalLine} className="px-2 py-1 text-xs text-[#4ecdc4] hover:bg-[#4ecdc4]/15 rounded transition-colors" title="Insert horizontal line">Line</button>
+                  <button onClick={insertPageBreak} className="px-2 py-1 text-xs text-[#a78bfa] hover:bg-[#a78bfa]/15 rounded transition-colors" title="Insert page break">Page Break</button>
+                  <button onClick={insertSignatureBlock} className="px-2 py-1 text-xs text-[#f472b6] hover:bg-[#f472b6]/15 rounded transition-colors" title="Insert signature block">Signature</button>
                   <div className={`w-px h-4 ${borderColor} mx-1 self-center`} />
-                  <button onClick={findNextPlaceholder} className={`px-2 py-1 text-xs ${textMuted} hover:${textPrimary} hover:bg-[#d4a373]/10 rounded transition-colors`} title="Find next [placeholder]">Find [...]</button>
-                  <button onClick={handleCopyText} className={`px-2 py-1 text-xs ${textMuted} hover:${textPrimary} hover:bg-[#d4a373]/10 rounded transition-colors`} title="Copy to clipboard">Copy</button>
-                  <button onClick={handleUndo} className={`px-2 py-1 text-xs ${textMuted} hover:${textPrimary} hover:bg-[#d4a373]/10 rounded transition-colors`} title="Undo (Ctrl+Z)">Undo</button>
+                  <button onClick={findNextPlaceholder} className="px-2 py-1 text-xs text-[#f0b866] hover:bg-[#f0b866]/15 rounded transition-colors" title="Find next [placeholder]">Find [...]</button>
+                  <button onClick={handleCopyText} className="px-2 py-1 text-xs text-[#4ade80] hover:bg-[#4ade80]/15 rounded transition-colors" title="Copy to clipboard">Copy</button>
+                  <button onClick={handleUndo} className="px-2 py-1 text-xs text-[#ff7a7a] hover:bg-[#ff7a7a]/15 rounded transition-colors" title="Undo (Ctrl+Z)">Undo</button>
                   <div className="flex-1" />
-                  <button onClick={() => setAutoCapitalize(!autoCapitalize)} className={`px-2 py-1 text-xs rounded transition-colors ${autoCapitalize ? "bg-[#d4a373] text-[#0f0f0f]" : `${textMuted} hover:bg-[#d4a373]/10`}`} title="Auto-capitalize sentences">
+                  <button onClick={() => setAutoCapitalize(!autoCapitalize)} className={`px-2 py-1 text-xs rounded transition-colors ${autoCapitalize ? "bg-gradient-to-r from-[#a78bfa] to-[#f472b6] text-white" : "text-[#a78bfa] hover:bg-[#a78bfa]/15"}`} title="Auto-capitalize sentences">
                     Aa
                   </button>
-                  <button onClick={() => { const goal = prompt("Word count goal (0 to disable):", wordCountGoal.toString()); if (goal !== null) setGoal(parseInt(goal) || 0); }} className={`px-2 py-1 text-xs ${textMuted} hover:${textPrimary} hover:bg-[#d4a373]/10 rounded transition-colors`} title="Set word count goal">
+                  <button onClick={() => { const goal = prompt("Word count goal (0 to disable):", wordCountGoal.toString()); if (goal !== null) setGoal(parseInt(goal) || 0); }} className="px-2 py-1 text-xs text-[#4ecdc4] hover:bg-[#4ecdc4]/15 rounded transition-colors" title="Set word count goal">
                     Goal
                   </button>
                 </div>
@@ -910,28 +920,28 @@ export default function Home() {
 
               {/* Actions */}
               <section className="flex flex-col sm:flex-row gap-3 pt-4">
-                <button onClick={handlePreviewPDF} disabled={isGenerating || !bodyText.trim()} className={`flex-1 px-6 py-3 rounded-lg ${textPrimary} ${bgElevated} border ${borderColor} hover:border-[#3a3a3a] disabled:opacity-40 disabled:cursor-not-allowed transition-colors`}>
+                <button onClick={handlePreviewPDF} disabled={isGenerating || !bodyText.trim()} className={`flex-1 px-6 py-3 rounded-xl ${textPrimary} ${bgSecondary} border-2 border-[#60a5fa] hover:bg-[#60a5fa]/10 hover:shadow-lg hover:shadow-[#60a5fa]/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all font-medium`}>
                   {isGenerating ? "Generating..." : "Preview PDF"}
                 </button>
-                <button onClick={handleGeneratePDF} disabled={isGenerating || !bodyText.trim()} className="flex-1 px-6 py-3 rounded-lg text-[#0f0f0f] bg-[#d4a373] hover:bg-[#e5b888] disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-medium">
+                <button onClick={handleGeneratePDF} disabled={isGenerating || !bodyText.trim()} className="flex-1 px-6 py-3 rounded-xl text-white bg-gradient-to-r from-[#a78bfa] via-[#f472b6] to-[#f0b866] hover:opacity-90 hover:shadow-lg hover:shadow-[#a78bfa]/30 disabled:opacity-40 disabled:cursor-not-allowed transition-all font-medium">
                   {isGenerating ? "Generating..." : "Download PDF"}
                 </button>
-                <button onClick={handleExportWord} disabled={isGenerating || !bodyText.trim()} className={`px-6 py-3 rounded-lg ${textPrimary} ${bgElevated} border ${borderColor} hover:border-[#3a3a3a] disabled:opacity-40 disabled:cursor-not-allowed transition-colors`}>
+                <button onClick={handleExportWord} disabled={isGenerating || !bodyText.trim()} className={`px-6 py-3 rounded-xl ${textPrimary} ${bgSecondary} border-2 border-[#4ecdc4] hover:bg-[#4ecdc4]/10 hover:shadow-lg hover:shadow-[#4ecdc4]/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all font-medium`}>
                   Export Word
                 </button>
               </section>
 
               {/* Quick Actions */}
-              <section className={`flex flex-wrap gap-2 pt-2 border-t ${borderColor}`}>
-                <button onClick={handleUseLastSettings} className={`text-sm ${textMuted} hover:${textSecondary} transition-colors`}>Use last settings</button>
-                <span className={borderColor}>·</span>
-                <button onClick={handleSaveAsFavorite} className={`text-sm ${textMuted} hover:${textSecondary} transition-colors`}>Save as favorite</button>
-                <span className={borderColor}>·</span>
-                <button onClick={() => setShowGuide(true)} className={`text-sm ${textMuted} hover:${textSecondary} transition-colors`}>Help</button>
-                <span className={borderColor}>·</span>
-                <button onClick={() => setShowPrivacySettings(true)} className={`text-sm ${textMuted} hover:${textSecondary} transition-colors`}>Privacy</button>
-                <span className={borderColor}>·</span>
-                <Link href="/suggestions" className={`text-sm ${textMuted} hover:${textSecondary} transition-colors`}>Feedback</Link>
+              <section className={`flex flex-wrap gap-3 pt-4 border-t ${borderColor}`}>
+                <button onClick={handleUseLastSettings} className="text-sm text-[#a78bfa] hover:text-[#c4b5fd] transition-colors">Use last settings</button>
+                <span className={textMuted}>·</span>
+                <button onClick={handleSaveAsFavorite} className="text-sm text-[#f472b6] hover:text-[#f9a8d4] transition-colors">Save as favorite</button>
+                <span className={textMuted}>·</span>
+                <button onClick={() => setShowGuide(true)} className="text-sm text-[#4ecdc4] hover:text-[#7eddd6] transition-colors">Help</button>
+                <span className={textMuted}>·</span>
+                <button onClick={() => setShowPrivacySettings(true)} className="text-sm text-[#60a5fa] hover:text-[#93c5fd] transition-colors">Privacy</button>
+                <span className={textMuted}>·</span>
+                <Link href="/suggestions" className="text-sm text-[#f0b866] hover:text-[#f5c97a] transition-colors">Feedback</Link>
               </section>
             </div>
           </div>
