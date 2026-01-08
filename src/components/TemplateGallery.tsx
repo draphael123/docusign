@@ -53,6 +53,10 @@ export default function TemplateGallery({ onSelectTemplate, isOpen, onClose }: T
   const [isProcessing, setIsProcessing] = useState(false);
   const [uploadedFileName, setUploadedFileName] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Header skip options
+  const [skipHeader, setSkipHeader] = useState(false);
+  const [headerLinesToSkip, setHeaderLinesToSkip] = useState(3);
 
   // Load user templates from localStorage
   useEffect(() => {
@@ -82,6 +86,8 @@ export default function TemplateGallery({ onSelectTemplate, isOpen, onClose }: T
     setFormBody("");
     setFormError("");
     setUploadedFileName("");
+    setSkipHeader(false);
+    setHeaderLinesToSkip(3);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -230,11 +236,20 @@ export default function TemplateGallery({ onSelectTemplate, isOpen, onClose }: T
         return;
       }
 
-      // Clean up extracted text
+      // Clean up extracted text - preserve line breaks for header skipping
       extractedText = extractedText
-        .replace(/\s+/g, " ")
-        .replace(/\n\s*\n/g, "\n\n")
+        .replace(/[ \t]+/g, " ")  // Collapse spaces/tabs but keep newlines
+        .replace(/\n{3,}/g, "\n\n")  // Max 2 consecutive newlines
         .trim();
+
+      // Skip header lines if enabled
+      if (skipHeader && headerLinesToSkip > 0) {
+        const lines = extractedText.split("\n");
+        if (lines.length > headerLinesToSkip) {
+          extractedText = lines.slice(headerLinesToSkip).join("\n").trim();
+          console.log(`Skipped ${headerLinesToSkip} header lines`);
+        }
+      }
 
       // Set form values
       setFormBody(extractedText);
@@ -470,6 +485,32 @@ export default function TemplateGallery({ onSelectTemplate, isOpen, onClose }: T
                         <div className="text-sm text-[#666666]">
                           Supports .docx and .pdf files
                         </div>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Skip Header Option */}
+                  <div className="mt-3 flex items-center gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={skipHeader}
+                        onChange={(e) => setSkipHeader(e.target.checked)}
+                        className="w-4 h-4 rounded border-[#2a2a2a] bg-[#1a1a24] text-[#a78bfa] focus:ring-[#a78bfa] focus:ring-offset-0 cursor-pointer"
+                      />
+                      <span className="text-sm text-[#a0a0a0]">Skip header lines</span>
+                    </label>
+                    {skipHeader && (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min="1"
+                          max="20"
+                          value={headerLinesToSkip}
+                          onChange={(e) => setHeaderLinesToSkip(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))}
+                          className="w-16 px-2 py-1 text-sm rounded bg-[#1a1a24] border border-[#2a2a2a] text-[#fafafa] focus:border-[#a78bfa] focus:outline-none"
+                        />
+                        <span className="text-xs text-[#666666]">lines to skip</span>
                       </div>
                     )}
                   </div>
