@@ -38,6 +38,9 @@ export default function TemplateGallery({ onSelectTemplate, isOpen, onClose }: T
   const [activeTab, setActiveTab] = useState<"all" | "builtin" | "custom">("all");
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   
+  // Search state
+  const [searchQuery, setSearchQuery] = useState("");
+  
   // Form state
   const [formName, setFormName] = useState("");
   const [formDocType, setFormDocType] = useState(documentTypes[0]);
@@ -202,14 +205,31 @@ export default function TemplateGallery({ onSelectTemplate, isOpen, onClose }: T
   };
 
   const getFilteredTemplates = () => {
+    let templates: DocumentTemplate[];
     switch (activeTab) {
       case "builtin":
-        return documentTemplates;
+        templates = documentTemplates;
+        break;
       case "custom":
-        return userTemplates;
+        templates = userTemplates;
+        break;
       default:
-        return [...documentTemplates, ...userTemplates];
+        templates = [...documentTemplates, ...userTemplates];
     }
+    
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      templates = templates.filter(
+        (t) =>
+          t.name.toLowerCase().includes(query) ||
+          t.description.toLowerCase().includes(query) ||
+          t.category.toLowerCase().includes(query) ||
+          t.documentType.toLowerCase().includes(query)
+      );
+    }
+    
+    return templates;
   };
 
   const filteredTemplates = getFilteredTemplates();
@@ -222,12 +242,21 @@ export default function TemplateGallery({ onSelectTemplate, isOpen, onClose }: T
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-[#2a2a2a]">
           <h2 className="text-xl text-[#fafafa]">Templates</h2>
-          <button
-            onClick={onClose}
-            className="text-[#666666] hover:text-[#fafafa] transition-colors text-xl"
-          >
-            ×
-          </button>
+          <div className="flex items-center gap-3">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search templates..."
+              className="px-3 py-1.5 text-sm bg-[#242424] border border-[#2a2a2a] rounded-lg text-[#fafafa] placeholder-[#666666] focus:border-[#d4a373] focus:outline-none w-48"
+            />
+            <button
+              onClick={onClose}
+              className="text-[#666666] hover:text-[#fafafa] transition-colors text-xl"
+            >
+              ×
+            </button>
+          </div>
         </div>
 
         {/* Tabs and Actions */}

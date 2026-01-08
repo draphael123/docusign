@@ -18,6 +18,45 @@
   --error: #f87171;
 }
 
+/* Light theme */
+.light {
+  --bg-primary: #f5f5f5;
+  --bg-secondary: #ffffff;
+  --bg-elevated: #fafafa;
+  --text-primary: #1a1a1a;
+  --text-secondary: #666666;
+  --text-muted: #999999;
+  --border-color: #e0e0e0;
+}
+
+.light body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.light input[type="text"],
+.light input[type="email"],
+.light input[type="date"],
+.light textarea,
+.light select {
+  color: var(--text-primary) !important;
+  background-color: var(--bg-secondary) !important;
+  border-color: var(--border-color) !important;
+}
+
+.light input::placeholder,
+.light textarea::placeholder {
+  color: var(--text-muted) !important;
+}
+
+.light ::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+.light ::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+}
+
 * {
   box-sizing: border-box;
 }

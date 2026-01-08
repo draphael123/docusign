@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { signatories } from "@/data/signatories";
 import { generatePDF } from "@/lib/pdfGenerator";
 import { Toaster, toast } from "react-hot-toast";
@@ -12,21 +12,11 @@ import { updateStats } from "@/utils/statistics";
 import TemplateGallery from "@/components/TemplateGallery";
 import StatisticsPanel from "@/components/StatisticsPanel";
 import DocumentHistory from "@/components/DocumentHistory";
-import ProgressIndicator from "@/components/ProgressIndicator";
 import UserGuide from "@/components/UserGuide";
-import Tooltip from "@/components/Tooltip";
 import FavoritesPanel from "@/components/FavoritesPanel";
 import Confetti from "@/components/Confetti";
 import PrivacySettings from "@/components/PrivacySettings";
 import SkipToContent from "@/components/SkipToContent";
-import { 
-  validateEmail, 
-  validatePhone, 
-  validateBodyText, 
-  validateName,
-  getCharacterCount,
-  ValidationResult 
-} from "@/utils/validation";
 import {
   saveLastUsedSettings,
   getLastUsedSettings,
@@ -70,11 +60,16 @@ interface DraftData {
   lineSpacing: number;
 }
 
+interface SavedRecipient {
+  id: string;
+  name: string;
+  title: string;
+  address: string;
+}
+
 export default function Home() {
   const [documentType, setDocumentType] = useState<string>("Letter of Recommendation");
-  const [selectedSignatory, setSelectedSignatory] = useState<string>(
-    signatories[0].id
-  );
+  const [selectedSignatory, setSelectedSignatory] = useState<string>(signatories[0].id);
   const [useCustomSignatory, setUseCustomSignatory] = useState<boolean>(false);
   const [customSignatoryName, setCustomSignatoryName] = useState<string>("");
   const [customSignatoryTitle, setCustomSignatoryTitle] = useState<string>("");
@@ -97,166 +92,205 @@ export default function Home() {
   const [showGuide, setShowGuide] = useState<boolean>(false);
   const [showFavorites, setShowFavorites] = useState<boolean>(false);
   const [showPrivacySettings, setShowPrivacySettings] = useState<boolean>(false);
-  const [currentStep, setCurrentStep] = useState<number>(1);
-  const [showWizard, setShowWizard] = useState<boolean>(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
-  const [autoSaveEnabled, setAutoSaveEnabled] = useState<boolean>(true);
-
-  // Validation states
-  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
-  const [validationWarnings, setValidationWarnings] = useState<Record<string, string>>({});
-  const [showValidation, setShowValidation] = useState<boolean>(false);
-
-  // DocuSign formatting
-  const [docusignMode, setDocusignMode] = useState<boolean>(false);
-
-  // Celebration states
+  const [autoSaveEnabled] = useState<boolean>(true);
   const [showConfetti, setShowConfetti] = useState<boolean>(false);
-
   const [mounted, setMounted] = useState(false);
 
+  // Theme
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
+
+  // Undo history
+  const [undoStack, setUndoStack] = useState<string[]>([]);
+  const [lastBodyText, setLastBodyText] = useState<string>("");
+
+  // Word count goal
+  const [wordCountGoal, setWordCountGoal] = useState<number>(0);
+  const [showWordGoal, setShowWordGoal] = useState<boolean>(false);
+
+  // Auto-capitalize
+  const [autoCapitalize, setAutoCapitalize] = useState<boolean>(false);
+
+  // Recently used
+  const [recentDocTypes, setRecentDocTypes] = useState<string[]>([]);
+  const [recentSignatories, setRecentSignatories] = useState<string[]>([]);
+
+  // Saved recipients (address book)
+  const [savedRecipients, setSavedRecipients] = useState<SavedRecipient[]>([]);
+  const [showAddressBook, setShowAddressBook] = useState<boolean>(false);
+
+  // Live preview
+  const [showLivePreview, setShowLivePreview] = useState<boolean>(false);
+  const [livePreviewUrl, setLivePreviewUrl] = useState<string | null>(null);
+  const previewDebounceRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Textarea ref for cursor manipulation
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Initialize
   useEffect(() => {
     setMounted(true);
     if (typeof window !== "undefined") {
-      const lastSavedStr = localStorage.getItem("lastSaved");
-      if (lastSavedStr) {
-        setLastSaved(new Date(lastSavedStr));
+      // Load theme
+      const savedTheme = localStorage.getItem("theme") as "dark" | "light" | null;
+      if (savedTheme) {
+        setTheme(savedTheme);
+        document.documentElement.classList.toggle("light", savedTheme === "light");
       }
+
+      // Load last saved timestamp
+      const lastSavedStr = localStorage.getItem("lastSaved");
+      if (lastSavedStr) setLastSaved(new Date(lastSavedStr));
+
+      // Load recent doc types
+      const recentTypes = localStorage.getItem("recentDocTypes");
+      if (recentTypes) setRecentDocTypes(JSON.parse(recentTypes));
+
+      // Load recent signatories
+      const recentSigs = localStorage.getItem("recentSignatories");
+      if (recentSigs) setRecentSignatories(JSON.parse(recentSigs));
+
+      // Load saved recipients
+      const recipients = localStorage.getItem("savedRecipients");
+      if (recipients) setSavedRecipients(JSON.parse(recipients));
+
+      // Load word count goal
+      const goal = localStorage.getItem("wordCountGoal");
+      if (goal) {
+        setWordCountGoal(parseInt(goal));
+        setShowWordGoal(true);
+      }
+
+      // Load auto-capitalize setting
+      const autoCap = localStorage.getItem("autoCapitalize");
+      if (autoCap === "true") setAutoCapitalize(true);
     }
   }, []);
 
   // Track unsaved changes
   useEffect(() => {
-    if (mounted) {
-      setHasUnsavedChanges(true);
+    if (mounted) setHasUnsavedChanges(true);
+  }, [documentType, selectedSignatory, bodyText, recipientName, recipientTitle, recipientAddress, subject, customSignatoryName, customSignatoryTitle, customSignatoryCompany, customSignatoryPhone, customSignatoryEmail, fontSize, lineSpacing, mounted]);
+
+  // Save to undo stack when body text changes significantly
+  useEffect(() => {
+    if (bodyText && bodyText !== lastBodyText && bodyText.length - lastBodyText.length > 20) {
+      setUndoStack((prev) => [...prev.slice(-19), lastBodyText]);
+      setLastBodyText(bodyText);
     }
-  }, [
-    documentType,
-    selectedSignatory,
-    bodyText,
-    recipientName,
-    recipientTitle,
-    recipientAddress,
-    subject,
-    customSignatoryName,
-    customSignatoryTitle,
-    customSignatoryCompany,
-    customSignatoryPhone,
-    customSignatoryEmail,
-    fontSize,
-    lineSpacing,
-    mounted,
-  ]);
+  }, [bodyText, lastBodyText]);
+
+  // Update recent doc types when changed
+  useEffect(() => {
+    if (mounted && documentType) {
+      const updated = [documentType, ...recentDocTypes.filter((t) => t !== documentType)].slice(0, 5);
+      setRecentDocTypes(updated);
+      localStorage.setItem("recentDocTypes", JSON.stringify(updated));
+    }
+  }, [documentType]);
+
+  // Update recent signatories when changed
+  useEffect(() => {
+    if (mounted && selectedSignatory && !useCustomSignatory) {
+      const updated = [selectedSignatory, ...recentSignatories.filter((s) => s !== selectedSignatory)].slice(0, 3);
+      setRecentSignatories(updated);
+      localStorage.setItem("recentSignatories", JSON.stringify(updated));
+    }
+  }, [selectedSignatory, useCustomSignatory]);
+
+  // Live preview debounce
+  useEffect(() => {
+    if (!showLivePreview || !bodyText.trim()) {
+      if (livePreviewUrl) {
+        URL.revokeObjectURL(livePreviewUrl);
+        setLivePreviewUrl(null);
+      }
+      return;
+    }
+
+    if (previewDebounceRef.current) clearTimeout(previewDebounceRef.current);
+
+    previewDebounceRef.current = setTimeout(async () => {
+      try {
+        const signatory = useCustomSignatory
+          ? { name: customSignatoryName || "Signatory", title: customSignatoryTitle, company: customSignatoryCompany, phone: customSignatoryPhone, email: customSignatoryEmail }
+          : signatories.find((s) => s.id === selectedSignatory) || signatories[0];
+
+        const pdfBlob = await generatePDF({
+          documentType,
+          bodyText,
+          signatoryName: signatory.name,
+          signatoryTitle: signatory.title,
+          signatoryCompany: signatory.company,
+          signatoryPhone: signatory.phone,
+          signatoryEmail: signatory.email,
+          recipientName,
+          recipientTitle,
+          recipientAddress,
+          subject,
+          fontSize,
+          lineSpacing,
+        });
+
+        if (livePreviewUrl) URL.revokeObjectURL(livePreviewUrl);
+        setLivePreviewUrl(URL.createObjectURL(pdfBlob));
+      } catch (e) {
+        console.error("Live preview error:", e);
+      }
+    }, 1000);
+
+    return () => {
+      if (previewDebounceRef.current) clearTimeout(previewDebounceRef.current);
+    };
+  }, [showLivePreview, bodyText, documentType, recipientName, recipientTitle, recipientAddress, subject, fontSize, lineSpacing, selectedSignatory, useCustomSignatory, customSignatoryName, customSignatoryTitle, customSignatoryCompany, customSignatoryPhone, customSignatoryEmail]);
 
   const handleAutoSave = useCallback(() => {
-    const draft: DraftData = {
-      documentType,
-      selectedSignatory,
-      bodyText,
-      recipientName,
-      recipientTitle,
-      recipientAddress,
-      subject,
-      customSignatoryName,
-      customSignatoryTitle,
-      customSignatoryCompany,
-      customSignatoryPhone,
-      customSignatoryEmail,
-      fontSize,
-      lineSpacing,
-    };
+    const draft: DraftData = { documentType, selectedSignatory, bodyText, recipientName, recipientTitle, recipientAddress, subject, customSignatoryName, customSignatoryTitle, customSignatoryCompany, customSignatoryPhone, customSignatoryEmail, fontSize, lineSpacing };
     localStorage.setItem("documentDraft", JSON.stringify(draft));
     const now = new Date();
     localStorage.setItem("lastSaved", now.toISOString());
     setLastSaved(now);
     setHasUnsavedChanges(false);
-  }, [
-    documentType,
-    selectedSignatory,
-    bodyText,
-    recipientName,
-    recipientTitle,
-    recipientAddress,
-    subject,
-    customSignatoryName,
-    customSignatoryTitle,
-    customSignatoryCompany,
-    customSignatoryPhone,
-    customSignatoryEmail,
-    fontSize,
-    lineSpacing,
-  ]);
+  }, [documentType, selectedSignatory, bodyText, recipientName, recipientTitle, recipientAddress, subject, customSignatoryName, customSignatoryTitle, customSignatoryCompany, customSignatoryPhone, customSignatoryEmail, fontSize, lineSpacing]);
 
   // Auto-save every 30 seconds
   useEffect(() => {
     if (!mounted || !autoSaveEnabled) return;
-
-    const autoSaveInterval = setInterval(() => {
-      if (hasUnsavedChanges && bodyText.trim()) {
-        handleAutoSave();
-      }
+    const interval = setInterval(() => {
+      if (hasUnsavedChanges && bodyText.trim()) handleAutoSave();
     }, 30000);
-
-    return () => clearInterval(autoSaveInterval);
+    return () => clearInterval(interval);
   }, [hasUnsavedChanges, bodyText, autoSaveEnabled, mounted, handleAutoSave]);
 
-  // Warn about unsaved changes before leaving
+  // Warn about unsaved changes
   useEffect(() => {
     if (!mounted) return;
-
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (hasUnsavedChanges && bodyText.trim()) {
         e.preventDefault();
         e.returnValue = "";
-        return "";
       }
     };
-
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [hasUnsavedChanges, bodyText, mounted]);
 
-  // Update "last saved" display every minute
+  // Refresh timestamp
   const [, setRefreshTimestamp] = useState(0);
   useEffect(() => {
-    const timer = setInterval(() => {
-      setRefreshTimestamp(Date.now());
-    }, 60000);
+    const timer = setInterval(() => setRefreshTimestamp(Date.now()), 60000);
     return () => clearInterval(timer);
   }, []);
 
-  // Character and word count
   const characterCount = bodyText.length;
   const wordCount = bodyText.trim() ? bodyText.trim().split(/\s+/).length : 0;
 
-  // Progress steps
-  const progressSteps = ["Document Type", "Recipient", "Signatory", "Content", "Generate"];
-
   // Keyboard shortcuts
   useKeyboardShortcuts([
-    {
-      key: "s",
-      ctrl: true,
-      action: () => handleSaveDraft(),
-      description: "Save draft",
-    },
-    {
-      key: "p",
-      ctrl: true,
-      action: () => {
-        if (bodyText.trim()) handlePreviewPDF();
-      },
-      description: "Preview PDF",
-    },
-    {
-      key: "g",
-      ctrl: true,
-      action: () => {
-        if (bodyText.trim()) handleGeneratePDF();
-      },
-      description: "Generate PDF",
-    },
+    { key: "s", ctrl: true, action: () => handleSaveDraft(), description: "Save draft" },
+    { key: "p", ctrl: true, action: () => { if (bodyText.trim()) handlePreviewPDF(); }, description: "Preview PDF" },
+    { key: "z", ctrl: true, action: () => handleUndo(), description: "Undo" },
   ]);
 
   // Load draft on mount
@@ -268,6 +302,7 @@ export default function Home() {
         setDocumentType(draft.documentType || "Letter of Recommendation");
         setSelectedSignatory(draft.selectedSignatory || signatories[0].id);
         setBodyText(draft.bodyText || "");
+        setLastBodyText(draft.bodyText || "");
         setRecipientName(draft.recipientName || "");
         setRecipientTitle(draft.recipientTitle || "");
         setRecipientAddress(draft.recipientAddress || "");
@@ -283,92 +318,47 @@ export default function Home() {
     }
   }, []);
 
-  // Auto-save draft
+  // Auto-save draft to localStorage
   useEffect(() => {
-    const draft: DraftData = {
-      documentType,
-      selectedSignatory,
-      bodyText,
-      recipientName,
-      recipientTitle,
-      recipientAddress,
-      subject,
-      customSignatoryName,
-      customSignatoryTitle,
-      customSignatoryCompany,
-      customSignatoryPhone,
-      customSignatoryEmail,
-      fontSize,
-      lineSpacing,
-    };
+    const draft: DraftData = { documentType, selectedSignatory, bodyText, recipientName, recipientTitle, recipientAddress, subject, customSignatoryName, customSignatoryTitle, customSignatoryCompany, customSignatoryPhone, customSignatoryEmail, fontSize, lineSpacing };
     localStorage.setItem("documentDraft", JSON.stringify(draft));
-  }, [
-    documentType,
-    selectedSignatory,
-    bodyText,
-    recipientName,
-    recipientTitle,
-    recipientAddress,
-    subject,
-    customSignatoryName,
-    customSignatoryTitle,
-    customSignatoryCompany,
-    customSignatoryPhone,
-    customSignatoryEmail,
-    fontSize,
-    lineSpacing,
-  ]);
+  }, [documentType, selectedSignatory, bodyText, recipientName, recipientTitle, recipientAddress, subject, customSignatoryName, customSignatoryTitle, customSignatoryCompany, customSignatoryPhone, customSignatoryEmail, fontSize, lineSpacing]);
 
+  // Theme toggle
+  const toggleTheme = () => {
+    const newTheme = theme === "dark" ? "light" : "dark";
+    setTheme(newTheme);
+    localStorage.setItem("theme", newTheme);
+    document.documentElement.classList.toggle("light", newTheme === "light");
+  };
+
+  // Handlers
   const handleSaveDraft = () => {
-    const draft: DraftData = {
-      documentType,
-      selectedSignatory,
-      bodyText,
-      recipientName,
-      recipientTitle,
-      recipientAddress,
-      subject,
-      customSignatoryName,
-      customSignatoryTitle,
-      customSignatoryCompany,
-      customSignatoryPhone,
-      customSignatoryEmail,
-      fontSize,
-      lineSpacing,
-    };
-    localStorage.setItem("documentDraft", JSON.stringify(draft));
-    const now = new Date();
-    localStorage.setItem("lastSaved", now.toISOString());
-    setLastSaved(now);
-    setHasUnsavedChanges(false);
+    handleAutoSave();
     toast.success("Draft saved");
   };
 
   const handleLoadDraft = () => {
     const savedDraft = localStorage.getItem("documentDraft");
     if (savedDraft) {
-      try {
-        const draft: DraftData = JSON.parse(savedDraft);
-        setDocumentType(draft.documentType || "Letter of Recommendation");
-        setSelectedSignatory(draft.selectedSignatory || signatories[0].id);
-        setBodyText(draft.bodyText || "");
-        setRecipientName(draft.recipientName || "");
-        setRecipientTitle(draft.recipientTitle || "");
-        setRecipientAddress(draft.recipientAddress || "");
-        setSubject(draft.subject || "");
-        setCustomSignatoryName(draft.customSignatoryName || "");
-        setCustomSignatoryTitle(draft.customSignatoryTitle || "");
-        setCustomSignatoryCompany(draft.customSignatoryCompany || "");
-        setCustomSignatoryPhone(draft.customSignatoryPhone || "");
-        setCustomSignatoryEmail(draft.customSignatoryEmail || "");
-        setUseCustomSignatory(!!draft.customSignatoryName);
-        setFontSize(draft.fontSize || 11);
-        setLineSpacing(draft.lineSpacing || 1.5);
-        setHasUnsavedChanges(false);
-        toast.success("Draft loaded");
-      } catch (error) {
-        toast.error("Error loading draft");
-      }
+      const draft: DraftData = JSON.parse(savedDraft);
+      setDocumentType(draft.documentType || "Letter of Recommendation");
+      setSelectedSignatory(draft.selectedSignatory || signatories[0].id);
+      setBodyText(draft.bodyText || "");
+      setRecipientName(draft.recipientName || "");
+      setRecipientTitle(draft.recipientTitle || "");
+      setRecipientAddress(draft.recipientAddress || "");
+      setSubject(draft.subject || "");
+      setCustomSignatoryName(draft.customSignatoryName || "");
+      setCustomSignatoryTitle(draft.customSignatoryTitle || "");
+      setCustomSignatoryCompany(draft.customSignatoryCompany || "");
+      setCustomSignatoryPhone(draft.customSignatoryPhone || "");
+      setCustomSignatoryEmail(draft.customSignatoryEmail || "");
+      setUseCustomSignatory(!!draft.customSignatoryName);
+      setFontSize(draft.fontSize || 11);
+      setLineSpacing(draft.lineSpacing || 1.5);
+      setHasUnsavedChanges(false);
+      toast.success("Draft loaded");
     } else {
       toast.error("No draft found");
     }
@@ -391,7 +381,179 @@ export default function Home() {
     setUseCustomSignatory(false);
     setFontSize(11);
     setLineSpacing(1.5);
+    setUndoStack([]);
     toast.success("Draft cleared");
+  };
+
+  const handleUndo = () => {
+    if (undoStack.length > 0) {
+      const previous = undoStack[undoStack.length - 1];
+      setUndoStack((prev) => prev.slice(0, -1));
+      setBodyText(previous);
+      setLastBodyText(previous);
+      toast.success("Undone");
+    } else {
+      toast("Nothing to undo", { icon: "ℹ️" });
+    }
+  };
+
+  const handleCopyText = () => {
+    if (bodyText.trim()) {
+      navigator.clipboard.writeText(bodyText);
+      toast.success("Copied to clipboard");
+    }
+  };
+
+  // Quick insert functions
+  const insertAtCursor = (text: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) {
+      setBodyText((prev) => prev + text);
+      return;
+    }
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const newText = bodyText.substring(0, start) + text + bodyText.substring(end);
+    setBodyText(newText);
+    setTimeout(() => {
+      textarea.selectionStart = textarea.selectionEnd = start + text.length;
+      textarea.focus();
+    }, 0);
+  };
+
+  const insertDate = () => insertAtCursor(new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }));
+  const insertPageBreak = () => insertAtCursor("\n\n--- PAGE BREAK ---\n\n");
+  const insertHorizontalLine = () => insertAtCursor("\n─────────────────────────────────────────\n");
+  const insertSignatureBlock = () => {
+    const block = `\n\n─────────────────────────────────────────\n\nSIGNATURE\n\nSign: ___________________________\n\nPrint Name: _____________________\n\nTitle: __________________________\n\nDate: ___________________________\n\n─────────────────────────────────────────`;
+    insertAtCursor(block);
+  };
+
+  // Find and highlight placeholders
+  const findNextPlaceholder = () => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    const regex = /\[[^\]]+\]/g;
+    const matches: { index: number; text: string }[] = [];
+    let match;
+    while ((match = regex.exec(bodyText)) !== null) {
+      matches.push({ index: match.index, text: match[0] });
+    }
+    if (matches.length === 0) {
+      toast("No placeholders found", { icon: "ℹ️" });
+      return;
+    }
+    const currentPos = textarea.selectionEnd;
+    const nextMatch = matches.find((m) => m.index >= currentPos) || matches[0];
+    if (nextMatch) {
+      textarea.focus();
+      textarea.setSelectionRange(nextMatch.index, nextMatch.index + nextMatch.text.length);
+    }
+  };
+
+  // Auto-capitalize handler
+  const handleBodyTextChange = (value: string) => {
+    if (autoCapitalize && value.length > bodyText.length) {
+      const diff = value.substring(bodyText.length);
+      if (diff === " " || diff === "\n") {
+        const sentences = value.split(/([.!?]\s+)/);
+        const capitalized = sentences.map((s, i) => {
+          if (i % 2 === 0 && s.length > 0) {
+            return s.charAt(0).toUpperCase() + s.slice(1);
+          }
+          return s;
+        }).join("");
+        setBodyText(capitalized);
+        return;
+      }
+    }
+    setBodyText(value);
+  };
+
+  // Save recipient
+  const saveCurrentRecipient = () => {
+    if (!recipientName.trim()) {
+      toast.error("Enter a recipient name first");
+      return;
+    }
+    const newRecipient: SavedRecipient = {
+      id: `recipient-${Date.now()}`,
+      name: recipientName,
+      title: recipientTitle,
+      address: recipientAddress,
+    };
+    const updated = [...savedRecipients, newRecipient];
+    setSavedRecipients(updated);
+    localStorage.setItem("savedRecipients", JSON.stringify(updated));
+    toast.success("Recipient saved");
+  };
+
+  const loadRecipient = (recipient: SavedRecipient) => {
+    setRecipientName(recipient.name);
+    setRecipientTitle(recipient.title);
+    setRecipientAddress(recipient.address);
+    setShowAddressBook(false);
+    toast.success("Recipient loaded");
+  };
+
+  const deleteRecipient = (id: string) => {
+    const updated = savedRecipients.filter((r) => r.id !== id);
+    setSavedRecipients(updated);
+    localStorage.setItem("savedRecipients", JSON.stringify(updated));
+  };
+
+  // Word count goal
+  const setGoal = (goal: number) => {
+    setWordCountGoal(goal);
+    setShowWordGoal(goal > 0);
+    if (goal > 0) {
+      localStorage.setItem("wordCountGoal", goal.toString());
+    } else {
+      localStorage.removeItem("wordCountGoal");
+    }
+  };
+
+  // Export as Word
+  const handleExportWord = async () => {
+    if (!bodyText.trim()) {
+      toast.error("Please enter document body text");
+      return;
+    }
+
+    try {
+      const { Document, Packer, Paragraph, TextRun } = await import("docx");
+      const { saveAs } = await import("file-saver");
+
+      const signatory = useCustomSignatory
+        ? { name: customSignatoryName, title: customSignatoryTitle }
+        : signatories.find((s) => s.id === selectedSignatory);
+
+      const paragraphs = bodyText.split("\n").map(
+        (line) => new Paragraph({ children: [new TextRun({ text: line, size: fontSize * 2 })] })
+      );
+
+      const doc = new Document({
+        sections: [{
+          properties: {},
+          children: [
+            new Paragraph({ children: [new TextRun({ text: documentType, bold: true, size: 28 })] }),
+            new Paragraph({ children: [] }),
+            ...paragraphs,
+            new Paragraph({ children: [] }),
+            new Paragraph({ children: [new TextRun({ text: signatory?.name || "", bold: true })] }),
+            new Paragraph({ children: [new TextRun({ text: signatory?.title || "" })] }),
+          ],
+        }],
+      });
+
+      const blob = await Packer.toBlob(doc);
+      const dateStr = new Date().toISOString().split("T")[0];
+      saveAs(blob, `${documentType.replace(/\s+/g, "-")}-${dateStr}.docx`);
+      toast.success("Word document downloaded");
+    } catch (error) {
+      console.error("Error exporting Word:", error);
+      toast.error("Error exporting Word document");
+    }
   };
 
   const handlePreviewPDF = async () => {
@@ -399,44 +561,18 @@ export default function Home() {
       toast.error("Please enter document body text");
       return;
     }
-
     setIsGenerating(true);
     try {
       const signatory = useCustomSignatory
-        ? { 
-            name: customSignatoryName, 
-            title: customSignatoryTitle,
-            company: customSignatoryCompany,
-            phone: customSignatoryPhone,
-            email: customSignatoryEmail,
-          }
+        ? { name: customSignatoryName, title: customSignatoryTitle, company: customSignatoryCompany, phone: customSignatoryPhone, email: customSignatoryEmail }
         : signatories.find((s) => s.id === selectedSignatory);
+      if (!signatory || !signatory.name) throw new Error("Signatory information is required");
 
-      if (!signatory || !signatory.name) {
-        throw new Error("Signatory information is required");
-      }
-
-      const pdfBlob = await generatePDF({
-        documentType,
-        bodyText,
-        signatoryName: signatory.name,
-        signatoryTitle: signatory.title,
-        signatoryCompany: signatory.company,
-        signatoryPhone: signatory.phone,
-        signatoryEmail: signatory.email,
-        recipientName,
-        recipientTitle,
-        recipientAddress,
-        subject,
-        fontSize,
-        lineSpacing,
-      });
-
+      const pdfBlob = await generatePDF({ documentType, bodyText, signatoryName: signatory.name, signatoryTitle: signatory.title, signatoryCompany: signatory.company, signatoryPhone: signatory.phone, signatoryEmail: signatory.email, recipientName, recipientTitle, recipientAddress, subject, fontSize, lineSpacing });
       const url = URL.createObjectURL(pdfBlob);
       setPreviewUrl(url);
       setShowPreview(true);
     } catch (error: any) {
-      console.error("Error generating PDF preview:", error);
       toast.error(error.message || "Error generating PDF preview");
     } finally {
       setIsGenerating(false);
@@ -448,43 +584,18 @@ export default function Home() {
       toast.error("Please enter document body text");
       return;
     }
-
     setIsGenerating(true);
     try {
       const signatory = useCustomSignatory
-        ? { 
-            name: customSignatoryName, 
-            title: customSignatoryTitle,
-            company: customSignatoryCompany,
-            phone: customSignatoryPhone,
-            email: customSignatoryEmail,
-          }
+        ? { name: customSignatoryName, title: customSignatoryTitle, company: customSignatoryCompany, phone: customSignatoryPhone, email: customSignatoryEmail }
         : signatories.find((s) => s.id === selectedSignatory);
+      if (!signatory || !signatory.name) throw new Error("Signatory information is required");
 
-      if (!signatory || !signatory.name) {
-        throw new Error("Signatory information is required");
-      }
-
-      const pdfBlob = await generatePDF({
-        documentType,
-        bodyText,
-        signatoryName: signatory.name,
-        signatoryTitle: signatory.title,
-        signatoryCompany: signatory.company,
-        signatoryPhone: signatory.phone,
-        signatoryEmail: signatory.email,
-        recipientName,
-        recipientTitle,
-        recipientAddress,
-        subject,
-        fontSize,
-        lineSpacing,
-      });
-
+      const pdfBlob = await generatePDF({ documentType, bodyText, signatoryName: signatory.name, signatoryTitle: signatory.title, signatoryCompany: signatory.company, signatoryPhone: signatory.phone, signatoryEmail: signatory.email, recipientName, recipientTitle, recipientAddress, subject, fontSize, lineSpacing });
       const url = URL.createObjectURL(pdfBlob);
       const link = document.createElement("a");
       link.href = url;
-      const dateStr = new Date().toISOString().split('T')[0];
+      const dateStr = new Date().toISOString().split("T")[0];
       link.download = `${documentType.replace(/\s+/g, "-")}-${signatory.name.replace(/\s+/g, "-")}-${dateStr}.pdf`;
       document.body.appendChild(link);
       link.click();
@@ -493,35 +604,16 @@ export default function Home() {
 
       const isPrivateMode = localStorage.getItem("privateMode") === "true";
       if (!isPrivateMode) {
-        saveToHistory({
-          documentType,
-          signatoryName: signatory.name,
-        });
+        saveToHistory({ documentType, signatoryName: signatory.name });
         const { newAchievements } = updateStats(documentType, signatory.name);
         if (newAchievements.length > 0) {
           setShowConfetti(true);
-          newAchievements.forEach((achievement) => {
-            toast.success(`Achievement: ${achievement}`, { duration: 5000 });
-          });
+          newAchievements.forEach((a) => toast.success(`Achievement: ${a}`, { duration: 5000 }));
         }
       }
-
-      saveLastUsedSettings({
-        documentType,
-        selectedSignatory,
-        useCustomSignatory,
-        customSignatoryName,
-        customSignatoryTitle,
-        customSignatoryCompany,
-        customSignatoryPhone,
-        customSignatoryEmail,
-        fontSize,
-        lineSpacing,
-      });
-
+      saveLastUsedSettings({ documentType, selectedSignatory, useCustomSignatory, customSignatoryName, customSignatoryTitle, customSignatoryCompany, customSignatoryPhone, customSignatoryEmail, fontSize, lineSpacing });
       toast.success("PDF downloaded");
     } catch (error: any) {
-      console.error("Error generating PDF:", error);
       toast.error(error.message || "Error generating PDF");
     } finally {
       setIsGenerating(false);
@@ -531,7 +623,8 @@ export default function Home() {
   const handleSelectTemplate = (template: DocumentTemplate) => {
     setDocumentType(template.documentType);
     setBodyText(template.bodyText);
-    toast.success(`Template loaded`);
+    setLastBodyText(template.bodyText);
+    toast.success("Template loaded");
   };
 
   const handleLoadFromHistory = (item: DocumentHistoryItem) => {
@@ -545,23 +638,6 @@ export default function Home() {
       setCustomSignatoryName(item.signatoryName);
     }
     toast.success("Document loaded from history");
-  };
-
-  const validateField = (fieldName: string, value: string): ValidationResult => {
-    switch (fieldName) {
-      case "bodyText":
-        return validateBodyText(value);
-      case "customSignatoryEmail":
-        return validateEmail(value);
-      case "customSignatoryPhone":
-        return validatePhone(value);
-      case "customSignatoryName":
-        return validateName(value);
-      case "recipientName":
-        return value ? validateName(value) : { isValid: true };
-      default:
-        return { isValid: true };
-    }
   };
 
   const handleUseLastSettings = () => {
@@ -588,28 +664,9 @@ export default function Home() {
       toast.error("Please enter document content first");
       return;
     }
-    
     const favoriteName = prompt("Name this favorite:");
     if (!favoriteName) return;
-    
-    saveFavorite({
-      name: favoriteName,
-      documentType,
-      selectedSignatory,
-      useCustomSignatory,
-      customSignatoryName,
-      customSignatoryTitle,
-      customSignatoryCompany,
-      customSignatoryPhone,
-      customSignatoryEmail,
-      recipientName,
-      recipientTitle,
-      recipientAddress,
-      subject,
-      fontSize,
-      lineSpacing,
-    });
-    
+    saveFavorite({ name: favoriteName, documentType, selectedSignatory, useCustomSignatory, customSignatoryName, customSignatoryTitle, customSignatoryCompany, customSignatoryPhone, customSignatoryEmail, recipientName, recipientTitle, recipientAddress, subject, fontSize, lineSpacing });
     toast.success(`Saved as "${favoriteName}"`);
   };
 
@@ -636,604 +693,325 @@ export default function Home() {
     if (seconds < 60) return "just now";
     const minutes = Math.floor(seconds / 60);
     if (minutes < 60) return `${minutes}m ago`;
-    const hours = Math.floor(minutes / 60);
-    return `${hours}h ago`;
+    return `${Math.floor(minutes / 60)}h ago`;
   };
+
+  // Theme-aware classes
+  const bgPrimary = theme === "light" ? "bg-[#f5f5f5]" : "bg-[#0f0f0f]";
+  const bgSecondary = theme === "light" ? "bg-white" : "bg-[#1a1a1a]";
+  const bgElevated = theme === "light" ? "bg-[#fafafa]" : "bg-[#242424]";
+  const textPrimary = theme === "light" ? "text-[#1a1a1a]" : "text-[#fafafa]";
+  const textSecondary = theme === "light" ? "text-[#666666]" : "text-[#a0a0a0]";
+  const textMuted = theme === "light" ? "text-[#999999]" : "text-[#666666]";
+  const borderColor = theme === "light" ? "border-[#e0e0e0]" : "border-[#2a2a2a]";
 
   return (
     <>
       <SkipToContent />
-      <Toaster 
-        position="bottom-right"
-        toastOptions={{
-          style: {
-            background: '#242424',
-            color: '#fafafa',
-            border: '1px solid #2a2a2a',
-          },
-        }}
-      />
-      
-      <main 
-        id="main-content" 
-        className="min-h-screen py-8 px-4 sm:px-6 lg:px-8"
-        role="main"
-        tabIndex={-1}
-      >
-        <div className="max-w-3xl mx-auto animate-fade-in">
-          {/* Header */}
-          <header className="mb-8">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h1 className="text-3xl sm:text-4xl text-[#fafafa] mb-1">
-                  Document Generator
-                </h1>
-                <p className="text-sm text-[#666666]">
-                  Create professional PDF documents for DocuSign
-                </p>
-              </div>
-              
-              {mounted && lastSaved && (
-                <span className="text-xs text-[#666666]">
-                  {hasUnsavedChanges ? (
-                    <span className="text-[#d4a373]">Unsaved changes</span>
-                  ) : (
-                    <>Saved {getTimeAgo(lastSaved)}</>
+      <Toaster position="bottom-right" toastOptions={{ style: { background: theme === "light" ? "#fff" : "#242424", color: theme === "light" ? "#1a1a1a" : "#fafafa", border: `1px solid ${theme === "light" ? "#e0e0e0" : "#2a2a2a"}` } }} />
+
+      <div className={`min-h-screen ${bgPrimary} transition-colors`}>
+        <main id="main-content" className={`py-8 px-4 sm:px-6 lg:px-8 ${showLivePreview ? "lg:pr-[420px]" : ""}`} role="main" tabIndex={-1}>
+          <div className="max-w-3xl mx-auto animate-fade-in">
+            {/* Header */}
+            <header className="mb-8">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h1 className={`text-3xl sm:text-4xl ${textPrimary} mb-1`} style={{ fontFamily: "'Crimson Pro', serif" }}>
+                    Document Generator
+                  </h1>
+                  <p className={`text-sm ${textMuted}`}>Create professional PDF documents for DocuSign</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  {mounted && lastSaved && (
+                    <span className={`text-xs ${textMuted}`}>
+                      {hasUnsavedChanges ? <span className="text-[#d4a373]">Unsaved</span> : <>Saved {getTimeAgo(lastSaved)}</>}
+                    </span>
                   )}
-                </span>
+                  {mounted && (
+                    <button onClick={toggleTheme} className={`p-2 rounded-lg ${bgElevated} ${borderColor} border transition-colors`} title="Toggle theme">
+                      {theme === "dark" ? "☀️" : "🌙"}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Toolbar */}
+              <nav className={`flex flex-wrap gap-2 pb-4 border-b ${borderColor}`}>
+                <button onClick={() => setShowTemplateGallery(true)} className={`px-3 py-1.5 text-sm ${textSecondary} hover:${textPrimary} hover:${bgElevated} rounded transition-colors`}>Templates</button>
+                <button onClick={() => setShowFavorites(true)} className={`px-3 py-1.5 text-sm ${textSecondary} hover:${textPrimary} hover:${bgElevated} rounded transition-colors`}>Favorites</button>
+                <button onClick={() => setShowHistory(true)} className={`px-3 py-1.5 text-sm ${textSecondary} hover:${textPrimary} hover:${bgElevated} rounded transition-colors`}>History</button>
+                <button onClick={() => setShowStatistics(true)} className={`px-3 py-1.5 text-sm ${textSecondary} hover:${textPrimary} hover:${bgElevated} rounded transition-colors`}>Stats</button>
+                <div className="flex-1" />
+                <button onClick={() => setShowLivePreview(!showLivePreview)} className={`px-3 py-1.5 text-sm rounded transition-colors ${showLivePreview ? "bg-[#d4a373] text-[#0f0f0f]" : `${textSecondary} hover:${bgElevated}`}`}>
+                  {showLivePreview ? "Hide Preview" : "Live Preview"}
+                </button>
+                <button onClick={handleSaveDraft} className={`px-3 py-1.5 text-sm ${textSecondary} hover:${textPrimary} hover:${bgElevated} rounded transition-colors`} title="Ctrl+S">Save</button>
+                <button onClick={handleLoadDraft} className={`px-3 py-1.5 text-sm ${textSecondary} hover:${textPrimary} hover:${bgElevated} rounded transition-colors`}>Load</button>
+                <button onClick={handleClearDraft} className={`px-3 py-1.5 text-sm ${textSecondary} hover:${textPrimary} hover:${bgElevated} rounded transition-colors`}>Clear</button>
+              </nav>
+
+              {/* Recently Used */}
+              {recentDocTypes.length > 1 && (
+                <div className={`mt-4 flex flex-wrap items-center gap-2 text-xs ${textMuted}`}>
+                  <span>Recent:</span>
+                  {recentDocTypes.slice(0, 3).map((type) => (
+                    <button key={type} onClick={() => setDocumentType(type)} className={`px-2 py-1 rounded ${bgElevated} ${borderColor} border hover:border-[#d4a373] transition-colors`}>
+                      {type.replace("Letter of ", "")}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </header>
+
+            {/* Form */}
+            <div className="space-y-8">
+              {/* Document Type */}
+              <section>
+                <label htmlFor="documentType" className={`block text-sm font-medium ${textSecondary} mb-2`}>Document Type</label>
+                <select id="documentType" value={documentType} onChange={(e) => setDocumentType(e.target.value)} className={`w-full px-4 py-3 rounded-lg ${textPrimary} ${bgSecondary} border ${borderColor} focus:border-[#d4a373] cursor-pointer`}>
+                  {documentTypes.map((type) => (<option key={type} value={type}>{type}</option>))}
+                </select>
+              </section>
+
+              {/* Recipient */}
+              <section>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className={`text-lg ${textPrimary}`}>Recipient</h2>
+                  <div className="flex gap-2">
+                    <button onClick={() => setShowAddressBook(true)} className={`text-xs px-2 py-1 ${bgElevated} ${borderColor} border rounded hover:border-[#d4a373] transition-colors ${textMuted}`}>
+                      Address Book ({savedRecipients.length})
+                    </button>
+                    {recipientName && (
+                      <button onClick={saveCurrentRecipient} className="text-xs px-2 py-1 bg-[#d4a373] text-[#0f0f0f] rounded hover:bg-[#e5b888] transition-colors">
+                        Save Recipient
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="recipientName" className={`block text-sm ${textMuted} mb-1`}>Name</label>
+                    <input type="text" id="recipientName" value={recipientName} onChange={(e) => setRecipientName(e.target.value)} className={`w-full px-4 py-2.5 rounded-lg ${bgSecondary} border ${borderColor}`} placeholder="Optional" />
+                  </div>
+                  <div>
+                    <label htmlFor="recipientTitle" className={`block text-sm ${textMuted} mb-1`}>Title</label>
+                    <input type="text" id="recipientTitle" value={recipientTitle} onChange={(e) => setRecipientTitle(e.target.value)} className={`w-full px-4 py-2.5 rounded-lg ${bgSecondary} border ${borderColor}`} placeholder="Optional" />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label htmlFor="recipientAddress" className={`block text-sm ${textMuted} mb-1`}>Address</label>
+                    <textarea id="recipientAddress" value={recipientAddress} onChange={(e) => setRecipientAddress(e.target.value)} rows={2} className={`w-full px-4 py-2.5 rounded-lg resize-none ${bgSecondary} border ${borderColor}`} placeholder="Optional" />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label htmlFor="subject" className={`block text-sm ${textMuted} mb-1`}>Subject</label>
+                    <input type="text" id="subject" value={subject} onChange={(e) => setSubject(e.target.value)} className={`w-full px-4 py-2.5 rounded-lg ${bgSecondary} border ${borderColor}`} placeholder="Optional" />
+                  </div>
+                </div>
+              </section>
+
+              {/* Signatory */}
+              <section>
+                <h2 className={`text-lg ${textPrimary} mb-4`}>Signatory</h2>
+                <div className="space-y-2">
+                  {signatories.map((signatory) => (
+                    <label key={signatory.id} className={`flex items-center p-4 rounded-lg cursor-pointer transition-colors border ${!useCustomSignatory && selectedSignatory === signatory.id ? `${bgElevated} border-[#d4a373]` : `${bgSecondary} ${borderColor} hover:border-[#3a3a3a]`}`}>
+                      <input type="radio" name="signatory" value={signatory.id} checked={!useCustomSignatory && selectedSignatory === signatory.id} onChange={(e) => { setSelectedSignatory(e.target.value); setUseCustomSignatory(false); }} className="sr-only" />
+                      <div className={`w-4 h-4 rounded-full border-2 mr-3 flex items-center justify-center ${!useCustomSignatory && selectedSignatory === signatory.id ? "border-[#d4a373]" : "border-[#666666]"}`}>
+                        {!useCustomSignatory && selectedSignatory === signatory.id && <div className="w-2 h-2 rounded-full bg-[#d4a373]" />}
+                      </div>
+                      <div>
+                        <div className={textPrimary}>{signatory.name}</div>
+                        <div className={`text-sm ${textMuted}`}>{signatory.title}</div>
+                      </div>
+                    </label>
+                  ))}
+                  <div className={`p-4 rounded-lg border transition-colors ${useCustomSignatory ? `${bgElevated} border-[#d4a373]` : `${bgSecondary} ${borderColor}`}`}>
+                    <label className="flex items-center cursor-pointer">
+                      <input type="radio" name="signatory" checked={useCustomSignatory} onChange={() => setUseCustomSignatory(true)} className="sr-only" />
+                      <div className={`w-4 h-4 rounded-full border-2 mr-3 flex items-center justify-center ${useCustomSignatory ? "border-[#d4a373]" : "border-[#666666]"}`}>
+                        {useCustomSignatory && <div className="w-2 h-2 rounded-full bg-[#d4a373]" />}
+                      </div>
+                      <span className={textPrimary}>Custom Signatory</span>
+                    </label>
+                    {useCustomSignatory && (
+                      <div className="mt-4 space-y-3 pl-7">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <input type="text" value={customSignatoryName} onChange={(e) => setCustomSignatoryName(e.target.value)} placeholder="Name *" className={`px-3 py-2 rounded-lg text-sm ${bgSecondary} border ${borderColor}`} />
+                          <input type="text" value={customSignatoryTitle} onChange={(e) => setCustomSignatoryTitle(e.target.value)} placeholder="Title" className={`px-3 py-2 rounded-lg text-sm ${bgSecondary} border ${borderColor}`} />
+                        </div>
+                        <input type="text" value={customSignatoryCompany} onChange={(e) => setCustomSignatoryCompany(e.target.value)} placeholder="Company" className={`w-full px-3 py-2 rounded-lg text-sm ${bgSecondary} border ${borderColor}`} />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <input type="text" value={customSignatoryPhone} onChange={(e) => setCustomSignatoryPhone(e.target.value)} placeholder="Phone" className={`px-3 py-2 rounded-lg text-sm ${bgSecondary} border ${borderColor}`} />
+                          <input type="email" value={customSignatoryEmail} onChange={(e) => setCustomSignatoryEmail(e.target.value)} placeholder="Email" className={`px-3 py-2 rounded-lg text-sm ${bgSecondary} border ${borderColor}`} />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </section>
+
+              {/* Formatting */}
+              <section>
+                <h2 className={`text-lg ${textPrimary} mb-4`}>Formatting</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div>
+                    <label htmlFor="fontSize" className={`block text-sm ${textMuted} mb-2`}>Font Size: {fontSize}pt</label>
+                    <input type="range" id="fontSize" min="9" max="14" value={fontSize} onChange={(e) => setFontSize(Number(e.target.value))} className="w-full accent-[#d4a373]" />
+                  </div>
+                  <div>
+                    <label htmlFor="lineSpacing" className={`block text-sm ${textMuted} mb-2`}>Line Spacing: {lineSpacing.toFixed(1)}</label>
+                    <input type="range" id="lineSpacing" min="1" max="2.5" step="0.1" value={lineSpacing} onChange={(e) => setLineSpacing(Number(e.target.value))} className="w-full accent-[#d4a373]" />
+                  </div>
+                </div>
+              </section>
+
+              {/* Document Body */}
+              <section>
+                <div className="flex items-center justify-between mb-2">
+                  <label htmlFor="bodyText" className={`text-sm font-medium ${textSecondary}`}>Document Body</label>
+                  <div className="flex items-center gap-3">
+                    {showWordGoal && wordCountGoal > 0 && (
+                      <div className="flex items-center gap-2">
+                        <div className={`w-20 h-1.5 rounded-full ${bgElevated} overflow-hidden`}>
+                          <div className="h-full bg-[#d4a373] transition-all" style={{ width: `${Math.min(100, (wordCount / wordCountGoal) * 100)}%` }} />
+                        </div>
+                        <span className={`text-xs ${textMuted}`}>{wordCount}/{wordCountGoal}</span>
+                      </div>
+                    )}
+                    <span className={`text-xs ${textMuted}`}>{wordCount} words · {characterCount} chars</span>
+                  </div>
+                </div>
+
+                {/* Quick Insert Toolbar */}
+                <div className={`flex flex-wrap gap-1 mb-2 p-2 rounded-lg ${bgElevated} border ${borderColor}`}>
+                  <button onClick={insertDate} className={`px-2 py-1 text-xs ${textMuted} hover:${textPrimary} hover:bg-[#d4a373]/10 rounded transition-colors`} title="Insert today's date">Date</button>
+                  <button onClick={insertHorizontalLine} className={`px-2 py-1 text-xs ${textMuted} hover:${textPrimary} hover:bg-[#d4a373]/10 rounded transition-colors`} title="Insert horizontal line">Line</button>
+                  <button onClick={insertPageBreak} className={`px-2 py-1 text-xs ${textMuted} hover:${textPrimary} hover:bg-[#d4a373]/10 rounded transition-colors`} title="Insert page break">Page Break</button>
+                  <button onClick={insertSignatureBlock} className={`px-2 py-1 text-xs ${textMuted} hover:${textPrimary} hover:bg-[#d4a373]/10 rounded transition-colors`} title="Insert signature block">Signature</button>
+                  <div className={`w-px h-4 ${borderColor} mx-1 self-center`} />
+                  <button onClick={findNextPlaceholder} className={`px-2 py-1 text-xs ${textMuted} hover:${textPrimary} hover:bg-[#d4a373]/10 rounded transition-colors`} title="Find next [placeholder]">Find [...]</button>
+                  <button onClick={handleCopyText} className={`px-2 py-1 text-xs ${textMuted} hover:${textPrimary} hover:bg-[#d4a373]/10 rounded transition-colors`} title="Copy to clipboard">Copy</button>
+                  <button onClick={handleUndo} className={`px-2 py-1 text-xs ${textMuted} hover:${textPrimary} hover:bg-[#d4a373]/10 rounded transition-colors`} title="Undo (Ctrl+Z)">Undo</button>
+                  <div className="flex-1" />
+                  <button onClick={() => setAutoCapitalize(!autoCapitalize)} className={`px-2 py-1 text-xs rounded transition-colors ${autoCapitalize ? "bg-[#d4a373] text-[#0f0f0f]" : `${textMuted} hover:bg-[#d4a373]/10`}`} title="Auto-capitalize sentences">
+                    Aa
+                  </button>
+                  <button onClick={() => { const goal = prompt("Word count goal (0 to disable):", wordCountGoal.toString()); if (goal !== null) setGoal(parseInt(goal) || 0); }} className={`px-2 py-1 text-xs ${textMuted} hover:${textPrimary} hover:bg-[#d4a373]/10 rounded transition-colors`} title="Set word count goal">
+                    Goal
+                  </button>
+                </div>
+
+                <textarea ref={textareaRef} id="bodyText" value={bodyText} onChange={(e) => handleBodyTextChange(e.target.value)} rows={12} className={`w-full px-4 py-3 rounded-lg resize-y ${bgSecondary} border ${borderColor} ${textPrimary} ${bodyText.trim() && wordCount < 20 ? "border-[#f87171] focus:border-[#f87171]" : ""}`} placeholder="Enter the document content... Use [brackets] for placeholders." />
+
+                {bodyText.trim() && wordCount < 20 && (
+                  <p className="mt-2 text-sm text-[#f87171]">Consider adding more content for a professional document.</p>
+                )}
+              </section>
+
+              {/* Actions */}
+              <section className="flex flex-col sm:flex-row gap-3 pt-4">
+                <button onClick={handlePreviewPDF} disabled={isGenerating || !bodyText.trim()} className={`flex-1 px-6 py-3 rounded-lg ${textPrimary} ${bgElevated} border ${borderColor} hover:border-[#3a3a3a] disabled:opacity-40 disabled:cursor-not-allowed transition-colors`}>
+                  {isGenerating ? "Generating..." : "Preview PDF"}
+                </button>
+                <button onClick={handleGeneratePDF} disabled={isGenerating || !bodyText.trim()} className="flex-1 px-6 py-3 rounded-lg text-[#0f0f0f] bg-[#d4a373] hover:bg-[#e5b888] disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-medium">
+                  {isGenerating ? "Generating..." : "Download PDF"}
+                </button>
+                <button onClick={handleExportWord} disabled={isGenerating || !bodyText.trim()} className={`px-6 py-3 rounded-lg ${textPrimary} ${bgElevated} border ${borderColor} hover:border-[#3a3a3a] disabled:opacity-40 disabled:cursor-not-allowed transition-colors`}>
+                  Export Word
+                </button>
+              </section>
+
+              {/* Quick Actions */}
+              <section className={`flex flex-wrap gap-2 pt-2 border-t ${borderColor}`}>
+                <button onClick={handleUseLastSettings} className={`text-sm ${textMuted} hover:${textSecondary} transition-colors`}>Use last settings</button>
+                <span className={borderColor}>·</span>
+                <button onClick={handleSaveAsFavorite} className={`text-sm ${textMuted} hover:${textSecondary} transition-colors`}>Save as favorite</button>
+                <span className={borderColor}>·</span>
+                <button onClick={() => setShowGuide(true)} className={`text-sm ${textMuted} hover:${textSecondary} transition-colors`}>Help</button>
+                <span className={borderColor}>·</span>
+                <button onClick={() => setShowPrivacySettings(true)} className={`text-sm ${textMuted} hover:${textSecondary} transition-colors`}>Privacy</button>
+                <span className={borderColor}>·</span>
+                <Link href="/suggestions" className={`text-sm ${textMuted} hover:${textSecondary} transition-colors`}>Feedback</Link>
+              </section>
+            </div>
+          </div>
+        </main>
+
+        {/* Live Preview Panel */}
+        {showLivePreview && (
+          <div className={`fixed right-0 top-0 bottom-0 w-[400px] ${bgSecondary} border-l ${borderColor} p-4 hidden lg:flex flex-col`}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className={`font-medium ${textPrimary}`}>Live Preview</h3>
+              <button onClick={() => setShowLivePreview(false)} className={`${textMuted} hover:${textPrimary}`}>×</button>
+            </div>
+            <div className={`flex-1 rounded-lg ${bgElevated} overflow-hidden`}>
+              {livePreviewUrl ? (
+                <iframe src={livePreviewUrl} className="w-full h-full bg-white" title="Live Preview" />
+              ) : (
+                <div className={`flex items-center justify-center h-full ${textMuted} text-sm`}>
+                  Start typing to see preview...
+                </div>
               )}
             </div>
+          </div>
+        )}
+      </div>
 
-            {/* Toolbar */}
-            <nav className="flex flex-wrap gap-2 pb-6 border-b border-[#2a2a2a]">
-              <button
-                onClick={() => setShowTemplateGallery(true)}
-                className="px-3 py-1.5 text-sm text-[#a0a0a0] hover:text-[#fafafa] hover:bg-[#242424] rounded transition-colors"
-              >
-                Templates
-              </button>
-              <button
-                onClick={() => setShowFavorites(true)}
-                className="px-3 py-1.5 text-sm text-[#a0a0a0] hover:text-[#fafafa] hover:bg-[#242424] rounded transition-colors"
-              >
-                Favorites
-              </button>
-              <button
-                onClick={() => setShowHistory(true)}
-                className="px-3 py-1.5 text-sm text-[#a0a0a0] hover:text-[#fafafa] hover:bg-[#242424] rounded transition-colors"
-              >
-                History
-              </button>
-              <button
-                onClick={() => setShowStatistics(true)}
-                className="px-3 py-1.5 text-sm text-[#a0a0a0] hover:text-[#fafafa] hover:bg-[#242424] rounded transition-colors"
-              >
-                Stats
-              </button>
-              <div className="flex-1" />
-              <button
-                onClick={handleSaveDraft}
-                className="px-3 py-1.5 text-sm text-[#a0a0a0] hover:text-[#fafafa] hover:bg-[#242424] rounded transition-colors"
-                title="Ctrl+S"
-              >
-                Save
-              </button>
-              <button
-                onClick={handleLoadDraft}
-                className="px-3 py-1.5 text-sm text-[#a0a0a0] hover:text-[#fafafa] hover:bg-[#242424] rounded transition-colors"
-              >
-                Load
-              </button>
-              <button
-                onClick={handleClearDraft}
-                className="px-3 py-1.5 text-sm text-[#a0a0a0] hover:text-[#fafafa] hover:bg-[#242424] rounded transition-colors"
-              >
-                Clear
-              </button>
-              <button
-                onClick={() => setShowPrivacySettings(true)}
-                className="px-3 py-1.5 text-sm text-[#a0a0a0] hover:text-[#fafafa] hover:bg-[#242424] rounded transition-colors"
-              >
-                Privacy
-              </button>
-              <Link
-                href="/suggestions"
-                className="px-3 py-1.5 text-sm text-[#a0a0a0] hover:text-[#fafafa] hover:bg-[#242424] rounded transition-colors"
-              >
-                Feedback
-              </Link>
-            </nav>
-          </header>
-
-          {/* Form */}
-          <div className="space-y-8">
-            {/* Document Type */}
-            <section>
-              <label
-                htmlFor="documentType"
-                className="block text-sm font-medium text-[#a0a0a0] mb-2"
-              >
-                Document Type
-              </label>
-              <select
-                id="documentType"
-                value={documentType}
-                onChange={(e) => setDocumentType(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg text-[#fafafa] bg-[#1a1a1a] border border-[#2a2a2a] focus:border-[#d4a373] cursor-pointer"
-              >
-                {documentTypes.map((type) => (
-                  <option key={type} value={type}>
-                    {type}
-                  </option>
-                ))}
-              </select>
-            </section>
-
-            {/* Recipient */}
-            <section>
-              <h2 className="text-lg text-[#fafafa] mb-4">Recipient</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label
-                    htmlFor="recipientName"
-                    className="block text-sm text-[#666666] mb-1"
-                  >
-                    Name
-                  </label>
-                  <input
-                    type="text"
-                    id="recipientName"
-                    value={recipientName}
-                    onChange={(e) => setRecipientName(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-lg"
-                    placeholder="Optional"
-                  />
-                </div>
-                <div>
-                  <label
-                    htmlFor="recipientTitle"
-                    className="block text-sm text-[#666666] mb-1"
-                  >
-                    Title
-                  </label>
-                  <input
-                    type="text"
-                    id="recipientTitle"
-                    value={recipientTitle}
-                    onChange={(e) => setRecipientTitle(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-lg"
-                    placeholder="Optional"
-                  />
-                </div>
-                <div className="sm:col-span-2">
-                  <label
-                    htmlFor="recipientAddress"
-                    className="block text-sm text-[#666666] mb-1"
-                  >
-                    Address
-                  </label>
-                  <textarea
-                    id="recipientAddress"
-                    value={recipientAddress}
-                    onChange={(e) => setRecipientAddress(e.target.value)}
-                    rows={2}
-                    className="w-full px-4 py-2.5 rounded-lg resize-none"
-                    placeholder="Optional"
-                  />
-                </div>
-                <div className="sm:col-span-2">
-                  <label
-                    htmlFor="subject"
-                    className="block text-sm text-[#666666] mb-1"
-                  >
-                    Subject
-                  </label>
-                  <input
-                    type="text"
-                    id="subject"
-                    value={subject}
-                    onChange={(e) => setSubject(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-lg"
-                    placeholder="Optional"
-                  />
-                </div>
-              </div>
-            </section>
-
-            {/* Signatory */}
-            <section>
-              <h2 className="text-lg text-[#fafafa] mb-4">Signatory</h2>
-              <div className="space-y-2">
-                {signatories.map((signatory) => (
-                  <label
-                    key={signatory.id}
-                    className={`flex items-center p-4 rounded-lg cursor-pointer transition-colors border ${
-                      !useCustomSignatory && selectedSignatory === signatory.id
-                        ? 'bg-[#242424] border-[#d4a373]'
-                        : 'bg-[#1a1a1a] border-[#2a2a2a] hover:border-[#3a3a3a]'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="signatory"
-                      value={signatory.id}
-                      checked={!useCustomSignatory && selectedSignatory === signatory.id}
-                      onChange={(e) => {
-                        setSelectedSignatory(e.target.value);
-                        setUseCustomSignatory(false);
-                      }}
-                      className="sr-only"
-                    />
-                    <div className={`w-4 h-4 rounded-full border-2 mr-3 flex items-center justify-center ${
-                      !useCustomSignatory && selectedSignatory === signatory.id
-                        ? 'border-[#d4a373]'
-                        : 'border-[#666666]'
-                    }`}>
-                      {!useCustomSignatory && selectedSignatory === signatory.id && (
-                        <div className="w-2 h-2 rounded-full bg-[#d4a373]" />
-                      )}
-                    </div>
-                    <div>
-                      <div className="text-[#fafafa]">{signatory.name}</div>
-                      <div className="text-sm text-[#666666]">{signatory.title}</div>
-                    </div>
-                  </label>
-                ))}
-                
-                {/* Custom Signatory */}
-                <div
-                  className={`p-4 rounded-lg border transition-colors ${
-                    useCustomSignatory
-                      ? 'bg-[#242424] border-[#d4a373]'
-                      : 'bg-[#1a1a1a] border-[#2a2a2a]'
-                  }`}
-                >
-                  <label className="flex items-center cursor-pointer">
-                    <input
-                      type="radio"
-                      name="signatory"
-                      checked={useCustomSignatory}
-                      onChange={() => setUseCustomSignatory(true)}
-                      className="sr-only"
-                    />
-                    <div className={`w-4 h-4 rounded-full border-2 mr-3 flex items-center justify-center ${
-                      useCustomSignatory ? 'border-[#d4a373]' : 'border-[#666666]'
-                    }`}>
-                      {useCustomSignatory && (
-                        <div className="w-2 h-2 rounded-full bg-[#d4a373]" />
-                      )}
-                    </div>
-                    <span className="text-[#fafafa]">Custom Signatory</span>
-                  </label>
-                  
-                  {useCustomSignatory && (
-                    <div className="mt-4 space-y-3 pl-7">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <input
-                          type="text"
-                          value={customSignatoryName}
-                          onChange={(e) => setCustomSignatoryName(e.target.value)}
-                          placeholder="Name *"
-                          className="px-3 py-2 rounded-lg text-sm"
-                        />
-                        <input
-                          type="text"
-                          value={customSignatoryTitle}
-                          onChange={(e) => setCustomSignatoryTitle(e.target.value)}
-                          placeholder="Title"
-                          className="px-3 py-2 rounded-lg text-sm"
-                        />
+      {/* Address Book Modal */}
+      {showAddressBook && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+          <div className={`${bgSecondary} rounded-lg max-w-md w-full border ${borderColor}`}>
+            <div className={`flex items-center justify-between p-4 border-b ${borderColor}`}>
+              <h2 className={`text-lg ${textPrimary}`}>Address Book</h2>
+              <button onClick={() => setShowAddressBook(false)} className={`${textMuted} hover:${textPrimary} text-xl`}>×</button>
+            </div>
+            <div className="p-4 max-h-[60vh] overflow-auto">
+              {savedRecipients.length === 0 ? (
+                <p className={`text-center ${textMuted} py-8`}>No saved recipients yet. Fill in recipient details and click &quot;Save Recipient&quot; to add one.</p>
+              ) : (
+                <div className="space-y-2">
+                  {savedRecipients.map((r) => (
+                    <div key={r.id} className={`p-3 rounded-lg ${bgElevated} border ${borderColor} flex items-center justify-between`}>
+                      <div className="flex-1 cursor-pointer" onClick={() => loadRecipient(r)}>
+                        <div className={textPrimary}>{r.name}</div>
+                        {r.title && <div className={`text-sm ${textMuted}`}>{r.title}</div>}
                       </div>
-                      <input
-                        type="text"
-                        value={customSignatoryCompany}
-                        onChange={(e) => setCustomSignatoryCompany(e.target.value)}
-                        placeholder="Company"
-                        className="w-full px-3 py-2 rounded-lg text-sm"
-                      />
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <input
-                          type="text"
-                          value={customSignatoryPhone}
-                          onChange={(e) => setCustomSignatoryPhone(e.target.value)}
-                          placeholder="Phone"
-                          className="px-3 py-2 rounded-lg text-sm"
-                        />
-                        <input
-                          type="email"
-                          value={customSignatoryEmail}
-                          onChange={(e) => setCustomSignatoryEmail(e.target.value)}
-                          placeholder="Email"
-                          className="px-3 py-2 rounded-lg text-sm"
-                        />
-                      </div>
+                      <button onClick={() => deleteRecipient(r.id)} className={`${textMuted} hover:text-[#f87171] ml-2`}>×</button>
                     </div>
-                  )}
+                  ))}
                 </div>
-              </div>
-            </section>
-
-            {/* Formatting */}
-            <section>
-              <h2 className="text-lg text-[#fafafa] mb-4">Formatting</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div>
-                  <label
-                    htmlFor="fontSize"
-                    className="block text-sm text-[#666666] mb-2"
-                  >
-                    Font Size: {fontSize}pt
-                  </label>
-                  <input
-                    type="range"
-                    id="fontSize"
-                    min="9"
-                    max="14"
-                    value={fontSize}
-                    onChange={(e) => setFontSize(Number(e.target.value))}
-                    className="w-full accent-[#d4a373]"
-                  />
-                </div>
-                <div>
-                  <label
-                    htmlFor="lineSpacing"
-                    className="block text-sm text-[#666666] mb-2"
-                  >
-                    Line Spacing: {lineSpacing.toFixed(1)}
-                  </label>
-                  <input
-                    type="range"
-                    id="lineSpacing"
-                    min="1"
-                    max="2.5"
-                    step="0.1"
-                    value={lineSpacing}
-                    onChange={(e) => setLineSpacing(Number(e.target.value))}
-                    className="w-full accent-[#d4a373]"
-                  />
-                </div>
-              </div>
-            </section>
-
-            {/* Document Body */}
-            <section>
-              <div className="flex items-center justify-between mb-2">
-                <label
-                  htmlFor="bodyText"
-                  className="text-sm font-medium text-[#a0a0a0]"
-                >
-                  Document Body
-                </label>
-                <span className="text-xs text-[#666666]">
-                  {wordCount} words · {characterCount} chars
-                </span>
-              </div>
-              <textarea
-                id="bodyText"
-                value={bodyText}
-                onChange={(e) => setBodyText(e.target.value)}
-                rows={12}
-                className={`w-full px-4 py-3 rounded-lg resize-y ${
-                  bodyText.trim() && wordCount < 20
-                    ? 'border-[#f87171] focus:border-[#f87171]'
-                    : ''
-                }`}
-                placeholder="Enter the document content..."
-              />
-              
-              {/* DocuSign Formatting Toggle */}
-              <div className="mt-3 flex items-center justify-between p-3 bg-[#242424] rounded-lg border border-[#2a2a2a]">
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => setDocusignMode(!docusignMode)}
-                    className={`relative w-10 h-5 rounded-full transition-colors ${
-                      docusignMode ? 'bg-[#d4a373]' : 'bg-[#3a3a3a]'
-                    }`}
-                  >
-                    <span 
-                      className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
-                        docusignMode ? 'translate-x-5' : 'translate-x-0'
-                      }`}
-                    />
-                  </button>
-                  <span className="text-sm text-[#a0a0a0]">
-                    DocuSign signature block
-                  </span>
-                </div>
-                {docusignMode && (
-                  <button
-                    onClick={() => {
-                      const signatureBlock = `
-
-
-─────────────────────────────────────────
-
-SIGNATURE
-
-Sign: ___________________________
-
-Print Name: _____________________
-
-Title: __________________________
-
-Date: ___________________________
-
-─────────────────────────────────────────`;
-                      
-                      if (!bodyText.includes('SIGNATURE')) {
-                        setBodyText(bodyText.trimEnd() + signatureBlock);
-                        toast.success('Signature block added');
-                      } else {
-                        toast('Signature block already exists', { icon: 'ℹ️' });
-                      }
-                    }}
-                    className="text-xs px-3 py-1.5 bg-[#d4a373] text-[#0f0f0f] rounded hover:bg-[#e5b888] transition-colors"
-                  >
-                    Add Signature Block
-                  </button>
-                )}
-              </div>
-              {docusignMode && (
-                <p className="mt-2 text-xs text-[#666666]">
-                  Adds a formatted signature area for DocuSign. You can also add multiple signature blocks for multiple signers.
-                </p>
               )}
-
-              {bodyText.trim() && wordCount < 20 && (
-                <p className="mt-2 text-sm text-[#f87171]">
-                  Consider adding more content for a professional document.
-                </p>
-              )}
-            </section>
-
-            {/* Actions */}
-            <section className="flex flex-col sm:flex-row gap-3 pt-4">
-              <button
-                onClick={handlePreviewPDF}
-                disabled={isGenerating || !bodyText.trim()}
-                className="flex-1 px-6 py-3 rounded-lg text-[#fafafa] bg-[#242424] border border-[#2a2a2a] hover:bg-[#2a2a2a] hover:border-[#3a3a3a] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              >
-                {isGenerating ? "Generating..." : "Preview"}
-              </button>
-              <button
-                onClick={handleGeneratePDF}
-                disabled={isGenerating || !bodyText.trim()}
-                className="flex-1 px-6 py-3 rounded-lg text-[#0f0f0f] bg-[#d4a373] hover:bg-[#e5b888] disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-medium"
-              >
-                {isGenerating ? "Generating..." : "Download PDF"}
-              </button>
-            </section>
-
-            {/* Quick Actions */}
-            <section className="flex flex-wrap gap-2 pt-2 border-t border-[#2a2a2a]">
-              <button
-                onClick={handleUseLastSettings}
-                className="text-sm text-[#666666] hover:text-[#a0a0a0] transition-colors"
-              >
-                Use last settings
-              </button>
-              <span className="text-[#2a2a2a]">·</span>
-              <button
-                onClick={handleSaveAsFavorite}
-                className="text-sm text-[#666666] hover:text-[#a0a0a0] transition-colors"
-              >
-                Save as favorite
-              </button>
-              <span className="text-[#2a2a2a]">·</span>
-              <button
-                onClick={() => setShowGuide(true)}
-                className="text-sm text-[#666666] hover:text-[#a0a0a0] transition-colors"
-              >
-                Help
-              </button>
-            </section>
+            </div>
           </div>
         </div>
-      </main>
+      )}
 
       {/* PDF Preview Modal */}
       {showPreview && previewUrl && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-          <div className="bg-[#1a1a1a] rounded-lg max-w-4xl w-full max-h-[90vh] flex flex-col border border-[#2a2a2a]">
-            <div className="flex items-center justify-between p-4 border-b border-[#2a2a2a]">
-              <h2 className="text-lg text-[#fafafa]">Preview</h2>
-              <button
-                onClick={() => {
-                  setShowPreview(false);
-                  if (previewUrl) {
-                    URL.revokeObjectURL(previewUrl);
-                    setPreviewUrl(null);
-                  }
-                }}
-                className="text-[#666666] hover:text-[#fafafa] transition-colors text-xl"
-              >
-                ×
-              </button>
+          <div className={`${bgSecondary} rounded-lg max-w-4xl w-full max-h-[90vh] flex flex-col border ${borderColor}`}>
+            <div className={`flex items-center justify-between p-4 border-b ${borderColor}`}>
+              <h2 className={`text-lg ${textPrimary}`}>Preview</h2>
+              <button onClick={() => { setShowPreview(false); if (previewUrl) { URL.revokeObjectURL(previewUrl); setPreviewUrl(null); } }} className={`${textMuted} hover:${textPrimary} text-xl`}>×</button>
             </div>
-            <div className="flex-1 overflow-auto p-4 bg-[#242424]">
-              <iframe
-                src={previewUrl}
-                className="w-full h-full min-h-[600px] bg-white rounded"
-                title="PDF Preview"
-              />
+            <div className={`flex-1 overflow-auto p-4 ${bgElevated}`}>
+              <iframe src={previewUrl} className="w-full h-full min-h-[600px] bg-white rounded" title="PDF Preview" />
             </div>
-            <div className="p-4 border-t border-[#2a2a2a] flex gap-3">
-              <button
-                onClick={() => {
-                  const link = document.createElement("a");
-                  link.href = previewUrl;
-                  const dateStr = new Date().toISOString().split('T')[0];
-                  const signatory = useCustomSignatory
-                    ? { name: customSignatoryName, title: customSignatoryTitle }
-                    : signatories.find((s) => s.id === selectedSignatory);
-                  link.download = `${documentType.replace(/\s+/g, "-")}-${signatory?.name.replace(/\s+/g, "-") || "document"}-${dateStr}.pdf`;
-                  link.click();
-                  toast.success("PDF downloaded");
-                }}
-                className="flex-1 px-4 py-2 rounded-lg text-[#0f0f0f] bg-[#d4a373] hover:bg-[#e5b888] transition-colors"
-              >
-                Download
-              </button>
-              <button
-                onClick={() => {
-                  setShowPreview(false);
-                  if (previewUrl) {
-                    URL.revokeObjectURL(previewUrl);
-                    setPreviewUrl(null);
-                  }
-                }}
-                className="flex-1 px-4 py-2 rounded-lg text-[#fafafa] bg-[#242424] border border-[#2a2a2a] hover:bg-[#2a2a2a] transition-colors"
-              >
-                Close
-              </button>
+            <div className={`p-4 border-t ${borderColor} flex gap-3`}>
+              <button onClick={() => { const link = document.createElement("a"); link.href = previewUrl; const dateStr = new Date().toISOString().split("T")[0]; const signatory = useCustomSignatory ? { name: customSignatoryName } : signatories.find((s) => s.id === selectedSignatory); link.download = `${documentType.replace(/\s+/g, "-")}-${signatory?.name.replace(/\s+/g, "-") || "document"}-${dateStr}.pdf`; link.click(); toast.success("PDF downloaded"); }} className="flex-1 px-4 py-2 rounded-lg text-[#0f0f0f] bg-[#d4a373] hover:bg-[#e5b888] transition-colors">Download</button>
+              <button onClick={() => { setShowPreview(false); if (previewUrl) { URL.revokeObjectURL(previewUrl); setPreviewUrl(null); } }} className={`flex-1 px-4 py-2 rounded-lg ${textPrimary} ${bgElevated} border ${borderColor} hover:bg-opacity-80 transition-colors`}>Close</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Template Gallery Modal */}
-      <TemplateGallery
-        isOpen={showTemplateGallery}
-        onClose={() => setShowTemplateGallery(false)}
-        onSelectTemplate={handleSelectTemplate}
-      />
-
-      {/* Statistics Panel */}
-      <StatisticsPanel
-        isOpen={showStatistics}
-        onClose={() => setShowStatistics(false)}
-      />
-
-      {/* Document History */}
-      <DocumentHistory
-        isOpen={showHistory}
-        onClose={() => setShowHistory(false)}
-        onLoadDocument={handleLoadFromHistory}
-      />
-
-      {/* User Guide */}
-      {showGuide && (
-        <UserGuide onClose={() => setShowGuide(false)} />
-      )}
-
-      {/* Favorites Panel */}
-      <FavoritesPanel
-        isOpen={showFavorites}
-        onClose={() => setShowFavorites(false)}
-        onLoad={handleLoadFavorite}
-      />
-
-      {/* Confetti Celebration */}
-      <Confetti 
-        trigger={showConfetti}
-        onComplete={() => setShowConfetti(false)}
-      />
-
-      {/* Privacy Settings */}
-      <PrivacySettings
-        isOpen={showPrivacySettings}
-        onClose={() => setShowPrivacySettings(false)}
-      />
+      <TemplateGallery isOpen={showTemplateGallery} onClose={() => setShowTemplateGallery(false)} onSelectTemplate={handleSelectTemplate} />
+      <StatisticsPanel isOpen={showStatistics} onClose={() => setShowStatistics(false)} />
+      <DocumentHistory isOpen={showHistory} onClose={() => setShowHistory(false)} onLoadDocument={handleLoadFromHistory} />
+      {showGuide && <UserGuide onClose={() => setShowGuide(false)} />}
+      <FavoritesPanel isOpen={showFavorites} onClose={() => setShowFavorites(false)} onLoad={handleLoadFavorite} />
+      <Confetti trigger={showConfetti} onComplete={() => setShowConfetti(false)} />
+      <PrivacySettings isOpen={showPrivacySettings} onClose={() => setShowPrivacySettings(false)} />
     </>
   );
 }
