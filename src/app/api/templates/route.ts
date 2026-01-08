@@ -1,7 +1,10 @@
-import { kv } from "@vercel/kv";
 import { NextRequest, NextResponse } from "next/server";
 
-const TEMPLATES_KEY = "shared_user_templates";
+// Simple JSON storage - just need one env var!
+// Using JSONBin.io free tier
+const JSONBIN_API_KEY = process.env.JSONBIN_API_KEY; // Get free at jsonbin.io
+const JSONBIN_BIN_ID = process.env.JSONBIN_BIN_ID || ""; // Will be created on first write
+const JSONBIN_BASE_URL = "https://api.jsonbin.io/v3/b";
 
 export interface UserTemplate {
   id: string;
@@ -17,17 +20,30 @@ export interface UserTemplate {
 // GET - Fetch all shared templates
 export async function GET() {
   try {
-    // Check if KV is configured
-    if (!process.env.KV_REST_API_URL || !process.env.KV_REST_API_TOKEN) {
-      // Return empty array if KV not configured (fallback for local dev)
-      console.log("Vercel KV not configured, returning empty templates");
+    // Check if JSONBin is configured
+    if (!JSONBIN_BIN_ID) {
+      console.log("JSONBin not configured, returning empty templates");
       return NextResponse.json({ templates: [], source: "fallback" });
     }
 
-    const templates = await kv.get<UserTemplate[]>(TEMPLATES_KEY);
+    const response = await fetch(`${JSONBIN_BASE_URL}/${JSONBIN_BIN_ID}/latest`, {
+      headers: {
+        "X-Master-Key": JSONBIN_API_KEY || "",
+      },
+      // Cache for 30 seconds to reduce API calls
+      next: { revalidate: 30 },
+    });
+
+    if (!response.ok) {
+      throw new Error(`JSONBin fetch failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const templates = data.record?.templates || [];
+
     return NextResponse.json({ 
-      templates: templates || [], 
-      source: "kv" 
+      templates, 
+      source: "jsonbin" 
     });
   } catch (error) {
     console.error("Error fetching templates:", error);
@@ -35,6 +51,31 @@ export async function GET() {
       { error: "Failed to fetch templates", templates: [] },
       { status: 500 }
     );
+  }
+}
+
+// Helper to create a new bin if needed
+async function createBin(apiKey: string, templates: UserTemplate[]): Promise<string | null> {
+  try {
+    const response = await fetch(JSONBIN_BASE_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Master-Key": apiKey,
+        "X-Bin-Private": "false",
+        "X-Bin-Name": "docusign-templates",
+      },
+      body: JSON.stringify({ templates }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      console.log("Created new bin:", data.metadata.id);
+      return data.metadata.id;
+    }
+    return null;
+  } catch {
+    return null;
   }
 }
 
@@ -51,16 +92,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if KV is configured
-    if (!process.env.KV_REST_API_URL || !process.env.KV_REST_API_TOKEN) {
+    // Check if API key is configured
+    if (!JSONBIN_API_KEY) {
       return NextResponse.json(
         { error: "Storage not configured. Templates will only be saved locally." },
         { status: 503 }
       );
     }
-
-    // Get existing templates
-    const existingTemplates = (await kv.get<UserTemplate[]>(TEMPLATES_KEY)) || [];
 
     // Create new template with ID and timestamp
     const newTemplate: UserTemplate = {
@@ -69,11 +107,52 @@ export async function POST(request: NextRequest) {
       createdAt: new Date().toISOString(),
     };
 
+    let existingTemplates: UserTemplate[] = [];
+    let binId: string | null = JSONBIN_BIN_ID || null;
+
+    // If no bin exists, create one
+    if (!binId) {
+      const newBinId = await createBin(JSONBIN_API_KEY, [newTemplate]);
+      if (newBinId) {
+        return NextResponse.json({ 
+          success: true, 
+          template: newTemplate,
+          totalTemplates: 1,
+          newBinId: newBinId, // Return this so user can add it to env vars
+          message: `Template saved! Add JSONBIN_BIN_ID=${newBinId} to your environment variables.`
+        });
+      }
+      throw new Error("Could not create storage bin");
+    }
+
+    // Get existing templates
+    const fetchResponse = await fetch(`${JSONBIN_BASE_URL}/${binId}/latest`, {
+      headers: {
+        "X-Master-Key": JSONBIN_API_KEY,
+      },
+    });
+
+    if (fetchResponse.ok) {
+      const data = await fetchResponse.json();
+      existingTemplates = data.record?.templates || [];
+    }
+
     // Add to list
     const updatedTemplates = [...existingTemplates, newTemplate];
 
-    // Save to KV
-    await kv.set(TEMPLATES_KEY, updatedTemplates);
+    // Save to JSONBin
+    const updateResponse = await fetch(`${JSONBIN_BASE_URL}/${binId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Master-Key": JSONBIN_API_KEY,
+      },
+      body: JSON.stringify({ templates: updatedTemplates }),
+    });
+
+    if (!updateResponse.ok) {
+      throw new Error(`JSONBin update failed: ${updateResponse.status}`);
+    }
 
     return NextResponse.json({ 
       success: true, 
@@ -102,8 +181,8 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Check if KV is configured
-    if (!process.env.KV_REST_API_URL || !process.env.KV_REST_API_TOKEN) {
+    // Check if JSONBin is configured
+    if (!JSONBIN_BIN_ID || !JSONBIN_API_KEY) {
       return NextResponse.json(
         { error: "Storage not configured" },
         { status: 503 }
@@ -111,7 +190,18 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Get existing templates
-    const existingTemplates = (await kv.get<UserTemplate[]>(TEMPLATES_KEY)) || [];
+    const fetchResponse = await fetch(`${JSONBIN_BASE_URL}/${JSONBIN_BIN_ID}/latest`, {
+      headers: {
+        "X-Master-Key": JSONBIN_API_KEY,
+      },
+    });
+
+    if (!fetchResponse.ok) {
+      throw new Error("Failed to fetch existing templates");
+    }
+
+    const data = await fetchResponse.json();
+    const existingTemplates: UserTemplate[] = data.record?.templates || [];
 
     // Filter out the template to delete
     const updatedTemplates = existingTemplates.filter((t) => t.id !== templateId);
@@ -124,7 +214,18 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Save updated list
-    await kv.set(TEMPLATES_KEY, updatedTemplates);
+    const updateResponse = await fetch(`${JSONBIN_BASE_URL}/${JSONBIN_BIN_ID}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Master-Key": JSONBIN_API_KEY,
+      },
+      body: JSON.stringify({ templates: updatedTemplates }),
+    });
+
+    if (!updateResponse.ok) {
+      throw new Error(`JSONBin update failed: ${updateResponse.status}`);
+    }
 
     return NextResponse.json({ 
       success: true,
