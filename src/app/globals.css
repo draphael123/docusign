@@ -5,16 +5,25 @@
 @tailwind utilities;
 
 :root {
-  /* Refined color system - 3 primary accents only */
-  --color-violet: #8b5cf6;
-  --color-teal: #2dd4bf;
+  /* 🌈 Vibrant color palette */
+  --color-violet: #a855f7;
+  --color-purple: #9333ea;
+  --color-teal: #14b8a6;
+  --color-cyan: #06b6d4;
   --color-gold: #f59e0b;
+  --color-orange: #f97316;
+  --color-pink: #ec4899;
+  --color-rose: #f43f5e;
+  --color-lime: #84cc16;
+  --color-emerald: #10b981;
+  --color-sky: #0ea5e9;
+  --color-indigo: #6366f1;
   
-  /* Background hierarchy */
-  --bg-base: #09090b;
-  --bg-surface: #0f0f12;
-  --bg-elevated: #18181b;
-  --bg-overlay: #1f1f23;
+  /* Background hierarchy with subtle color tint */
+  --bg-base: #0a0a0f;
+  --bg-surface: #12121a;
+  --bg-elevated: #1a1a24;
+  --bg-overlay: #22222e;
   
   /* Text hierarchy */
   --text-primary: #fafafa;
@@ -22,23 +31,25 @@
   --text-muted: #52525b;
   --text-disabled: #3f3f46;
   
-  /* Border */
-  --border-default: #27272a;
-  --border-hover: #3f3f46;
+  /* Border with color tint */
+  --border-default: #2a2a3a;
+  --border-hover: #3f3f52;
   --border-focus: var(--color-violet);
   
-  /* Semantic colors */
+  /* Semantic colors - more vibrant */
   --color-success: #22c55e;
-  --color-warning: #f59e0b;
-  --color-error: #ef4444;
-  --color-info: #3b82f6;
+  --color-warning: #fbbf24;
+  --color-error: #f43f5e;
+  --color-info: #38bdf8;
   
-  /* Shadows */
+  /* Enhanced shadows with color */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.5);
-  --shadow-glow-violet: 0 0 20px rgba(139, 92, 246, 0.3);
-  --shadow-glow-teal: 0 0 20px rgba(45, 212, 191, 0.3);
+  --shadow-glow-violet: 0 0 30px rgba(168, 85, 247, 0.4);
+  --shadow-glow-teal: 0 0 30px rgba(20, 184, 166, 0.4);
+  --shadow-glow-pink: 0 0 30px rgba(236, 72, 153, 0.4);
+  --shadow-glow-orange: 0 0 30px rgba(249, 115, 22, 0.4);
   
   /* Spacing scale */
   --space-1: 0.25rem;
@@ -96,8 +107,21 @@
 }
 
 .light body {
-  background: linear-gradient(135deg, #fafafa 0%, #f0f9ff 50%, #fdf2f8 100%);
+  background: linear-gradient(135deg, 
+    #fef3f2 0%,    /* rose tint */
+    #fef9c3 25%,   /* yellow tint */
+    #ecfdf5 50%,   /* teal tint */
+    #eff6ff 75%,   /* blue tint */
+    #faf5ff 100%   /* violet tint */
+  );
   color: var(--text-primary);
+}
+
+.light body::before {
+  background: 
+    radial-gradient(ellipse 600px 600px at 10% 20%, rgba(168, 85, 247, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse 500px 500px at 90% 80%, rgba(236, 72, 153, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse 400px 400px at 50% 50%, rgba(20, 184, 166, 0.05) 0%, transparent 50%);
 }
 
 .light input[type="text"],
@@ -136,18 +160,42 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   line-height: 1.6;
+  overflow-x: hidden;
 }
 
-/* Subtle gradient mesh background */
+/* 🌈 Colorful animated gradient orbs */
 body::before {
   content: '';
   position: fixed;
   inset: 0;
   background: 
-    radial-gradient(ellipse 80% 50% at 20% 40%, rgba(139, 92, 246, 0.08) 0%, transparent 50%),
-    radial-gradient(ellipse 60% 50% at 80% 60%, rgba(45, 212, 191, 0.06) 0%, transparent 50%);
+    radial-gradient(ellipse 600px 600px at 10% 20%, rgba(168, 85, 247, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse 500px 500px at 90% 80%, rgba(236, 72, 153, 0.12) 0%, transparent 50%),
+    radial-gradient(ellipse 400px 400px at 50% 50%, rgba(20, 184, 166, 0.1) 0%, transparent 50%),
+    radial-gradient(ellipse 300px 300px at 80% 20%, rgba(249, 115, 22, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse 350px 350px at 20% 80%, rgba(99, 102, 241, 0.1) 0%, transparent 50%);
   pointer-events: none;
   z-index: 0;
+  animation: orbFloat 20s ease-in-out infinite;
+}
+
+@keyframes orbFloat {
+  0%, 100% { 
+    transform: translate(0, 0) scale(1); 
+    filter: hue-rotate(0deg);
+  }
+  25% { 
+    transform: translate(30px, -20px) scale(1.05); 
+    filter: hue-rotate(15deg);
+  }
+  50% { 
+    transform: translate(-20px, 30px) scale(0.95); 
+    filter: hue-rotate(30deg);
+  }
+  75% { 
+    transform: translate(20px, 20px) scale(1.02); 
+    filter: hue-rotate(15deg);
+  }
 }
 
 body::after {
@@ -155,7 +203,7 @@ body::after {
   position: fixed;
   inset: 0;
   background: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
-  opacity: 0.02;
+  opacity: 0.015;
   pointer-events: none;
   z-index: 0;
 }
@@ -203,23 +251,33 @@ select:focus {
   box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.15);
 }
 
-/* Custom scrollbar */
+/* 🌈 Rainbow scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--bg-secondary);
+  background: var(--bg-surface);
+  border-radius: 5px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, var(--accent-violet), var(--accent-teal));
-  border-radius: 4px;
+  background: linear-gradient(180deg, 
+    var(--color-violet), 
+    var(--color-pink), 
+    var(--color-orange), 
+    var(--color-teal));
+  border-radius: 5px;
+  border: 2px solid var(--bg-surface);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, var(--accent-pink), var(--accent-violet));
+  background: linear-gradient(180deg, 
+    var(--color-pink), 
+    var(--color-orange), 
+    var(--color-teal), 
+    var(--color-violet));
 }
 
 /* Screen reader only */
@@ -235,9 +293,16 @@ select:focus {
   border-width: 0;
 }
 
-/* Selection */
+/* 🎨 Colorful selection */
 ::selection {
-  background-color: var(--accent-violet);
+  background: linear-gradient(135deg, var(--color-violet), var(--color-pink));
+  background-color: var(--color-violet);
+  color: white;
+  -webkit-text-fill-color: white;
+}
+
+::-moz-selection {
+  background-color: var(--color-violet);
   color: white;
 }
 
@@ -261,32 +326,194 @@ select:focus-visible {
   animation: fadeIn 0.4s ease-out forwards;
 }
 
-/* Gradient text utility */
+/* 🌈 Rainbow gradient text utility */
 .gradient-text {
-  background: linear-gradient(135deg, var(--accent-violet), var(--accent-teal), var(--accent-pink));
+  background: linear-gradient(135deg, 
+    var(--color-violet) 0%, 
+    var(--color-pink) 25%, 
+    var(--color-orange) 50%, 
+    var(--color-teal) 75%, 
+    var(--color-violet) 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: rainbowText 5s linear infinite;
+}
+
+@keyframes rainbowText {
+  0% { background-position: 0% center; }
+  100% { background-position: 200% center; }
+}
+
+/* Sunset gradient text */
+.gradient-text-sunset {
+  background: linear-gradient(135deg, #f43f5e, #f97316, #fbbf24);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-/* Glow effects */
+/* Ocean gradient text */
+.gradient-text-ocean {
+  background: linear-gradient(135deg, #06b6d4, #3b82f6, #8b5cf6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Forest gradient text */
+.gradient-text-forest {
+  background: linear-gradient(135deg, #22c55e, #14b8a6, #06b6d4);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* 🌟 Enhanced glow effects */
 .glow-violet {
-  box-shadow: 0 0 20px rgba(167, 139, 250, 0.3);
+  box-shadow: 0 0 30px rgba(168, 85, 247, 0.4), 0 0 60px rgba(168, 85, 247, 0.2);
 }
 
 .glow-teal {
-  box-shadow: 0 0 20px rgba(78, 205, 196, 0.3);
+  box-shadow: 0 0 30px rgba(20, 184, 166, 0.4), 0 0 60px rgba(20, 184, 166, 0.2);
 }
 
 .glow-pink {
-  box-shadow: 0 0 20px rgba(244, 114, 182, 0.3);
+  box-shadow: 0 0 30px rgba(236, 72, 153, 0.4), 0 0 60px rgba(236, 72, 153, 0.2);
 }
 
-/* Colorful border gradient */
+.glow-orange {
+  box-shadow: 0 0 30px rgba(249, 115, 22, 0.4), 0 0 60px rgba(249, 115, 22, 0.2);
+}
+
+.glow-rainbow {
+  box-shadow: 
+    0 0 20px rgba(168, 85, 247, 0.3),
+    0 0 40px rgba(236, 72, 153, 0.2),
+    0 0 60px rgba(249, 115, 22, 0.1);
+}
+
+/* 🌈 Colorful border gradients */
 .border-gradient {
   border: 2px solid transparent;
   background: linear-gradient(var(--bg-secondary), var(--bg-secondary)) padding-box,
-              linear-gradient(135deg, var(--accent-violet), var(--accent-teal)) border-box;
+              linear-gradient(135deg, var(--color-violet), var(--color-pink), var(--color-orange)) border-box;
+}
+
+.border-gradient-teal {
+  border: 2px solid transparent;
+  background: linear-gradient(var(--bg-secondary), var(--bg-secondary)) padding-box,
+              linear-gradient(135deg, var(--color-teal), var(--color-cyan), var(--color-sky)) border-box;
+}
+
+.border-gradient-sunset {
+  border: 2px solid transparent;
+  background: linear-gradient(var(--bg-secondary), var(--bg-secondary)) padding-box,
+              linear-gradient(135deg, var(--color-rose), var(--color-orange), var(--color-gold)) border-box;
+}
+
+.border-gradient-rainbow {
+  border: 2px solid transparent;
+  background: linear-gradient(var(--bg-secondary), var(--bg-secondary)) padding-box,
+              linear-gradient(135deg, 
+                var(--color-rose), 
+                var(--color-orange), 
+                var(--color-gold), 
+                var(--color-lime), 
+                var(--color-teal), 
+                var(--color-sky), 
+                var(--color-violet)
+              ) border-box;
+  animation: borderRainbow 3s linear infinite;
+}
+
+@keyframes borderRainbow {
+  0% { filter: hue-rotate(0deg); }
+  100% { filter: hue-rotate(360deg); }
+}
+
+/* 🎨 Colorful card backgrounds */
+.card-violet {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%);
+  border: 1px solid rgba(168, 85, 247, 0.2);
+}
+
+.card-pink {
+  background: linear-gradient(135deg, rgba(236, 72, 153, 0.1) 0%, rgba(219, 39, 119, 0.05) 100%);
+  border: 1px solid rgba(236, 72, 153, 0.2);
+}
+
+.card-teal {
+  background: linear-gradient(135deg, rgba(20, 184, 166, 0.1) 0%, rgba(13, 148, 136, 0.05) 100%);
+  border: 1px solid rgba(20, 184, 166, 0.2);
+}
+
+.card-orange {
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.1) 0%, rgba(234, 88, 12, 0.05) 100%);
+  border: 1px solid rgba(249, 115, 22, 0.2);
+}
+
+.card-gradient {
+  background: linear-gradient(135deg, 
+    rgba(168, 85, 247, 0.08) 0%, 
+    rgba(236, 72, 153, 0.05) 50%, 
+    rgba(20, 184, 166, 0.08) 100%);
+  border: 1px solid rgba(168, 85, 247, 0.15);
+}
+
+/* 🔘 Colorful buttons */
+.btn-gradient {
+  background: linear-gradient(135deg, var(--color-violet), var(--color-pink));
+  color: white;
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.btn-gradient:hover {
+  background: linear-gradient(135deg, var(--color-pink), var(--color-violet));
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.4);
+  transform: translateY(-2px);
+}
+
+.btn-gradient-teal {
+  background: linear-gradient(135deg, var(--color-teal), var(--color-cyan));
+  color: white;
+  border: none;
+}
+
+.btn-gradient-teal:hover {
+  background: linear-gradient(135deg, var(--color-cyan), var(--color-teal));
+  box-shadow: 0 0 20px rgba(20, 184, 166, 0.4);
+}
+
+.btn-gradient-sunset {
+  background: linear-gradient(135deg, var(--color-orange), var(--color-rose));
+  color: white;
+  border: none;
+}
+
+.btn-gradient-sunset:hover {
+  background: linear-gradient(135deg, var(--color-rose), var(--color-orange));
+  box-shadow: 0 0 20px rgba(249, 115, 22, 0.4);
+}
+
+.btn-rainbow {
+  background: linear-gradient(135deg, 
+    var(--color-rose), 
+    var(--color-orange), 
+    var(--color-gold), 
+    var(--color-teal), 
+    var(--color-violet));
+  background-size: 200% auto;
+  color: white;
+  border: none;
+  animation: rainbowBtn 3s linear infinite;
+}
+
+@keyframes rainbowBtn {
+  0% { background-position: 0% center; }
+  100% { background-position: 200% center; }
 }
 
 /* Range input styling */
@@ -676,16 +903,44 @@ body:not(.animated-bg)::after {
   mask-composite: exclude;
 }
 
-/* Text gradients */
+/* 🌈 Text gradients - vibrant */
 .text-gradient-primary {
-  background: linear-gradient(135deg, var(--color-violet), var(--color-teal));
+  background: linear-gradient(135deg, var(--color-violet), var(--color-pink), var(--color-teal));
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: textGradient 4s ease infinite;
+}
+
+@keyframes textGradient {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.text-gradient-warm {
+  background: linear-gradient(135deg, var(--color-gold), var(--color-orange), var(--color-rose));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-.text-gradient-warm {
-  background: linear-gradient(135deg, var(--color-gold), #ef4444);
+.text-gradient-cool {
+  background: linear-gradient(135deg, var(--color-cyan), var(--color-sky), var(--color-indigo));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-nature {
+  background: linear-gradient(135deg, var(--color-lime), var(--color-emerald), var(--color-teal));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-candy {
+  background: linear-gradient(135deg, var(--color-pink), var(--color-purple), var(--color-violet));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
