@@ -154,14 +154,19 @@ export function useOnboarding() {
 
   useEffect(() => {
     setMounted(true);
-    const completed = localStorage.getItem("onboardingComplete");
-    if (!completed) {
-      // Delay showing tour slightly for better UX
+    const hasVisited = localStorage.getItem("hasVisitedBefore");
+    
+    // Only show tour on very first visit ever
+    if (!hasVisited) {
+      // Mark as visited immediately so tour won't show on refresh
+      localStorage.setItem("hasVisitedBefore", "true");
+      // Show tour once
       setTimeout(() => setShowTour(true), 1000);
     }
   }, []);
 
   const resetTour = () => {
+    localStorage.removeItem("hasVisitedBefore");
     localStorage.removeItem("onboardingComplete");
     setShowTour(true);
   };
