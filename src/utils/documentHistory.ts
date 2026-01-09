@@ -4,6 +4,10 @@ export interface DocumentHistoryItem {
   signatoryName: string;
   createdAt: string;
   preview?: string;
+  bodyText?: string;
+  recipientName?: string;
+  recipientTitle?: string;
+  recipientAddress?: string;
 }
 
 const HISTORY_KEY = "documentHistory";

@@ -518,3 +518,181 @@ a:hover {
   0%, 50% { opacity: 1; }
   51%, 100% { opacity: 0; }
 }
+
+/* ========== MOBILE-FRIENDLY STYLES ========== */
+
+/* Touch-friendly buttons */
+@media (max-width: 768px) {
+  button, 
+  .btn-primary,
+  input[type="submit"] {
+    min-height: 44px;
+    padding: 0.75rem 1rem;
+  }
+  
+  input, textarea, select {
+    font-size: 16px !important; /* Prevent zoom on iOS */
+    min-height: 44px;
+    padding: 0.75rem !important;
+  }
+  
+  /* Larger tap targets */
+  .icon-btn {
+    width: 44px;
+    height: 44px;
+  }
+  
+  /* Stack form sections */
+  .form-grid {
+    grid-template-columns: 1fr !important;
+  }
+  
+  /* Hide non-essential on mobile */
+  .mobile-hide {
+    display: none !important;
+  }
+  
+  /* Full-width modals */
+  .modal-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    min-height: 100vh;
+  }
+  
+  /* Bottom sheet style for mobile modals */
+  .modal-bottom {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: auto !important;
+    border-radius: 16px 16px 0 0 !important;
+    max-height: 80vh;
+  }
+  
+  /* Larger font for readability */
+  body {
+    font-size: 16px;
+  }
+  
+  h1 { font-size: 1.5rem !important; }
+  h2 { font-size: 1.25rem !important; }
+  
+  /* Sticky action bar */
+  .mobile-actions {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 1rem;
+    background: var(--bg-surface);
+    border-top: 1px solid var(--border-default);
+    z-index: 40;
+    display: flex;
+    gap: 0.5rem;
+  }
+  
+  /* Add padding at bottom for sticky bar */
+  .has-mobile-actions {
+    padding-bottom: 80px;
+  }
+}
+
+/* Small mobile adjustments */
+@media (max-width: 480px) {
+  .section-label {
+    font-size: 0.65rem;
+  }
+  
+  .pill {
+    padding: 0.2rem 0.5rem;
+    font-size: 0.7rem;
+  }
+}
+
+/* Touch states */
+@media (hover: none) {
+  button:active,
+  .card:active {
+    transform: scale(0.98);
+  }
+  
+  /* Remove hover effects on touch devices */
+  .hover-lift:hover {
+    transform: none;
+    box-shadow: none;
+  }
+}
+
+/* ========== OFFLINE MODE ========== */
+
+.offline-indicator {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: var(--color-warning);
+  color: #000;
+  text-align: center;
+  padding: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  z-index: 100;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(0); }
+}
+
+.offline-saved {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.75rem;
+  background: rgba(129, 178, 154, 0.15);
+  color: var(--color-success);
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* ========== PRINT IMPROVEMENTS ========== */
+
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 12pt;
+  }
+  
+  .no-print,
+  nav,
+  aside,
+  button,
+  .btn-primary,
+  .icon-btn,
+  .modal-content {
+    display: none !important;
+  }
+  
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  
+  a {
+    color: black !important;
+    text-decoration: underline;
+  }
+  
+  /* Show URLs after links */
+  a[href^="http"]::after {
+    content: " (" attr(href) ")";
+    font-size: 0.8em;
+    color: #666;
+  }
+}

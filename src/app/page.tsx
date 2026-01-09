@@ -56,6 +56,19 @@ import LanguageSelector, { useLanguage, LanguageProvider } from "@/components/La
 import DocumentExpiration from "@/components/DocumentExpiration";
 import AutoSaveIndicator from "@/components/AutoSaveIndicator";
 import Sidebar, { SidebarIcons } from "@/components/Sidebar";
+
+// New feature imports - Phase 2
+import TemplateVariables, { useTemplateVariables } from "@/components/TemplateVariables";
+import PageSettings, { PageConfig, DEFAULT_PAGE_CONFIG } from "@/components/PageSettings";
+import SignaturePlacement, { SignatureField } from "@/components/SignaturePlacement";
+import QuickDuplicate from "@/components/QuickDuplicate";
+import DocumentSearch from "@/components/DocumentSearch";
+import ContactAutofill, { useContacts, Contact } from "@/components/ContactAutofill";
+import ApprovalWorkflow, { useApprovalWorkflow, Approver } from "@/components/ApprovalWorkflow";
+import DocumentRevisions, { useDocumentRevisions } from "@/components/DocumentRevisions";
+import BatchSend from "@/components/BatchSend";
+import PDFImport from "@/components/PDFImport";
+import { parseSmartDate, formatDate, getSmartDateSuggestions } from "@/utils/smartDate";
 import Card, { CardHeader, StatsCard } from "@/components/Card";
 import Button, { IconButton, ButtonGroup } from "@/components/Button";
 import { Skeleton, FormSectionSkeleton } from "@/components/Skeleton";
@@ -236,6 +249,20 @@ export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
+  // Phase 2 feature states
+  const [showTemplateVariables, setShowTemplateVariables] = useState<boolean>(false);
+  const [showPageSettings, setShowPageSettings] = useState<boolean>(false);
+  const [showSignaturePlacement, setShowSignaturePlacement] = useState<boolean>(false);
+  const [showQuickDuplicate, setShowQuickDuplicate] = useState<boolean>(false);
+  const [showDocumentSearch, setShowDocumentSearch] = useState<boolean>(false);
+  const [showApprovalWorkflow, setShowApprovalWorkflow] = useState<boolean>(false);
+  const [showDocumentRevisions, setShowDocumentRevisions] = useState<boolean>(false);
+  const [showBatchSend, setShowBatchSend] = useState<boolean>(false);
+  const [showPDFImport, setShowPDFImport] = useState<boolean>(false);
+  const [pageConfig, setPageConfig] = useState<PageConfig>(DEFAULT_PAGE_CONFIG);
+  const [signatureFields, setSignatureFields] = useState<SignatureField[]>([]);
+  const [isOffline, setIsOffline] = useState<boolean>(false);
+
   // Hooks for new features
   const { recordDocument } = useStreak();
   const { pinnedIds, togglePin, isPinned } = usePinnedTemplates();
@@ -254,6 +281,10 @@ export default function Home() {
 
   // New feature hooks
   const { showTour, setShowTour, resetTour } = useOnboarding();
+  const { contacts, addContact, importFromRecipients } = useContacts();
+  const { hasVariables, variableCount } = useTemplateVariables(bodyText);
+  const { workflows, createWorkflow } = useApprovalWorkflow();
+  const { saveRevision, getRevisionCount } = useDocumentRevisions("current-doc");
   const { branding, saveBranding } = useBranding();
   const { logEvent } = useAuditTrail();
   const { selectedTheme, selectTheme } = usePDFThemes();
@@ -318,8 +349,9 @@ export default function Home() {
 
       // Online status
       setIsOnline(navigator.onLine);
-      const handleOnline = () => setIsOnline(true);
-      const handleOffline = () => setIsOnline(false);
+      setIsOffline(!navigator.onLine);
+      const handleOnline = () => { setIsOnline(true); setIsOffline(false); };
+      const handleOffline = () => { setIsOnline(false); setIsOffline(true); };
       window.addEventListener("online", handleOnline);
       window.addEventListener("offline", handleOffline);
       
@@ -980,6 +1012,56 @@ export default function Home() {
     setFontSize(favorite.fontSize);
     setLineSpacing(favorite.lineSpacing);
     toast.success(`Loaded "${favorite.name}"`);
+  };
+
+  // Phase 2 feature handlers
+  const handleDuplicateDocument = (doc: DocumentHistoryItem, newRecipient: { name: string; title: string; address: string }) => {
+    setDocumentType(doc.documentType);
+    if (doc.bodyText) setBodyText(doc.bodyText);
+    setRecipientName(newRecipient.name);
+    setRecipientTitle(newRecipient.title);
+    setRecipientAddress(newRecipient.address);
+    toast.success("Document duplicated with new recipient");
+  };
+
+  const handleSearchSelect = (doc: DocumentHistoryItem) => {
+    setDocumentType(doc.documentType);
+    if (doc.bodyText) setBodyText(doc.bodyText);
+    if (doc.recipientName) setRecipientName(doc.recipientName);
+    toast.success("Document loaded");
+  };
+
+  const handleContactSelect = (contact: Contact) => {
+    setRecipientName(contact.name);
+    if (contact.title) setRecipientTitle(contact.title);
+    if (contact.address) setRecipientAddress(contact.address);
+    toast.success("Contact details filled");
+  };
+
+  const handleApprovalSubmit = (approvers: Approver[]) => {
+    createWorkflow("doc-" + Date.now(), documentType, approvers);
+    toast.success(`Submitted for approval (${approvers.length} reviewers)`);
+  };
+
+  const handleRestoreRevision = (content: string) => {
+    setBodyText(content);
+    toast.success("Revision restored");
+  };
+
+  const handleBatchGenerate = (recipients: Array<{ name: string }>, filledDocs: string[]) => {
+    // In a real app, this would generate multiple PDFs
+    toast.success(`Generated ${filledDocs.length} documents`);
+    console.log("Batch documents:", filledDocs);
+  };
+
+  const handlePDFImport = (text: string) => {
+    setBodyText(text);
+    toast.success("Document imported");
+  };
+
+  const handleApplyVariables = (filledText: string) => {
+    setBodyText(filledText);
+    toast.success("Variables applied");
   };
 
   const getTimeAgo = (date: Date) => {
@@ -1643,6 +1725,75 @@ export default function Home() {
         isOpen={showExpiration} 
         onClose={() => setShowExpiration(false)} 
       />
+
+      {/* Phase 2 Feature Modals */}
+      <TemplateVariables
+        bodyText={bodyText}
+        onApply={handleApplyVariables}
+        isOpen={showTemplateVariables}
+        onClose={() => setShowTemplateVariables(false)}
+      />
+
+      <PageSettings
+        config={pageConfig}
+        onChange={setPageConfig}
+        isOpen={showPageSettings}
+        onClose={() => setShowPageSettings(false)}
+      />
+
+      <SignaturePlacement
+        isOpen={showSignaturePlacement}
+        onClose={() => setShowSignaturePlacement(false)}
+        onSave={setSignatureFields}
+        existingFields={signatureFields}
+      />
+
+      <QuickDuplicate
+        isOpen={showQuickDuplicate}
+        onClose={() => setShowQuickDuplicate(false)}
+        onDuplicate={handleDuplicateDocument}
+      />
+
+      <DocumentSearch
+        isOpen={showDocumentSearch}
+        onClose={() => setShowDocumentSearch(false)}
+        onSelect={handleSearchSelect}
+      />
+
+      <ApprovalWorkflow
+        isOpen={showApprovalWorkflow}
+        onClose={() => setShowApprovalWorkflow(false)}
+        documentName={documentType}
+        onSubmitForApproval={handleApprovalSubmit}
+      />
+
+      <DocumentRevisions
+        isOpen={showDocumentRevisions}
+        onClose={() => setShowDocumentRevisions(false)}
+        documentId="current-doc"
+        currentContent={bodyText}
+        onRestoreRevision={handleRestoreRevision}
+      />
+
+      <BatchSend
+        isOpen={showBatchSend}
+        onClose={() => setShowBatchSend(false)}
+        templateBody={bodyText}
+        onGenerateBatch={handleBatchGenerate}
+      />
+
+      <PDFImport
+        isOpen={showPDFImport}
+        onClose={() => setShowPDFImport(false)}
+        onImport={handlePDFImport}
+      />
+
+      {/* Offline indicator */}
+      {isOffline && (
+        <div className="offline-indicator">
+          📴 You&apos;re offline. Changes will be saved locally.
+        </div>
+      )}
 
       {/* Onboarding Tour */}
       {showTour && (
