@@ -17,7 +17,6 @@ interface PageHeaderProps {
   showPreview?: boolean;
   onShowStreaks: () => void;
   onShowSettings: () => void;
-  onShowShortcuts: () => void;
   isSaving?: boolean;
   onShowAuth?: () => void;
   onShowMyTemplates?: () => void;
@@ -33,7 +32,6 @@ export default function PageHeader({
   showPreview = false,
   onShowStreaks,
   onShowSettings,
-  onShowShortcuts,
   isSaving = false,
   onShowAuth,
   onShowMyTemplates,

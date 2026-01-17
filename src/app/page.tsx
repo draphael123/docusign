@@ -56,7 +56,6 @@ import SettingsPanel, { AppSettings, DEFAULT_SETTINGS } from "@/components/Setti
 import ProfileManager, { SenderProfile, RecipientProfile } from "@/components/ProfileManager";
 import VersionHistory from "@/components/VersionHistory";
 import FindReplace from "@/components/FindReplace";
-import KeyboardShortcuts from "@/components/KeyboardShortcuts";
 import PDFThemes from "@/components/PDFThemes";
 import CustomBranding, { useBranding } from "@/components/CustomBranding";
 import AIWritingAssistant from "@/components/AIWritingAssistant";
@@ -295,7 +294,6 @@ export default function Home() {
     { key: "s", ctrl: true, action: () => handleSaveDraft(), description: "Save draft" },
     { key: "p", ctrl: true, action: () => { if (bodyText.trim()) handlePreviewPDF(); }, description: "Preview PDF" },
     { key: "f", ctrl: true, action: () => openModal("findReplace"), description: "Find & Replace" },
-    { key: "/", ctrl: false, action: () => openModal("keyboard"), description: "Show shortcuts" },
   ]);
 
   // Handlers
@@ -643,7 +641,6 @@ export default function Home() {
                 showPreview={showLivePreview}
                 onShowStreaks={() => openModal("streaks")}
                 onShowSettings={() => openModal("settings")}
-                onShowShortcuts={() => openModal("keyboard")}
                 isSaving={isSaving}
                 onShowAuth={() => setShowAuthModal(true)}
                 onShowMyTemplates={() => setShowMyTemplates(true)}
@@ -888,7 +885,6 @@ export default function Home() {
         text={bodyText}
         onTextChange={setBodyText}
       />
-      <KeyboardShortcuts isOpen={activeModal === "keyboard"} onClose={closeModal} />
       <PDFThemes
         isOpen={activeModal === "themes"}
         onClose={closeModal}
