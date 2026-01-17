@@ -75,7 +75,7 @@ export async function generatePDF(options: PDFOptions): Promise<Blob> {
       // Cover the footer area with white rectangle to hide footer text
       // Footer is in bottom ~15% of the template image
       const footerCoverY = pageHeight - 35; // Start covering 35mm from bottom
-      doc.setFillColor(255, 255, 255); // White
+      doc.setFillColor(249, 249, 249); // Match template background color
       doc.rect(0, footerCoverY, pageWidth, 35, "F"); // Fill rectangle to cover footer
       
       URL.revokeObjectURL(imageUrl);
